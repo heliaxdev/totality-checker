@@ -12,8 +12,12 @@ data TypeSig =
   TypeSig Name ITerm
   deriving (Eq, Show)
 
+type TBind = (Name, ITerm)
+
+type Telescope = [TBind]
+
 data Declaration =
-  DataDecl Name Sized Context ITerm [TypeSig]
+  DataDecl Name Sized Telescope ITerm [TypeSig]
 
 data Totality
   = Total [Int] -- well-founded arguments
