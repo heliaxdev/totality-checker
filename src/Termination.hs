@@ -1,7 +1,7 @@
 module Termination where
 
 import           GHC.Generics (Generic)
-import           TypeChecker
+import           Types
 
 data Sized -- distinguish between sized and not sized data type.
   = Sized
