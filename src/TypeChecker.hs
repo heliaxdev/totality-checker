@@ -34,11 +34,6 @@ data CTerm --Checkable terms
   deriving (Show, Eq)
   --Helper functions for turning ITerms to CTerm
 
-data Sized -- distinguish between sized and not sized data type.
-  = Sized
-  | NotSized
-  deriving (Eq, Show)
-
 cStar :: CTerm
 cStar = Inf Star
 
