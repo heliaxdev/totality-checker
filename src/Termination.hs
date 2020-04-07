@@ -31,3 +31,8 @@ instance Show Totality where
     "Total, with argument(s) " <> show args <> " which terminate(s)."
   show Unchecked = "not yet checked for totality"
   show Partial = "not total"
+
+-- equivalent to teleToType function in paper.
+teleToITerm :: Telescope -> ITerm -> ITerm
+teleToITerm [] exp              = exp
+teleToITerm ((n, exp):tel) exp2 = Pi (Inf exp) (Inf (teleToType tel exp2))
