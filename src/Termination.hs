@@ -1,16 +1,12 @@
 module Termination where
 
 import           GHC.Generics (Generic)
+import           SPos
 import           Types
 
 data Sized -- distinguish between sized and not sized data type.
   = Sized
   | NotSized
-  deriving (Eq, Show)
-
-data Pos -- positivity
-  = SPos
-  | NSPos
   deriving (Eq, Show)
 
 data TypeSig =
