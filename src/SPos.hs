@@ -1,12 +1,15 @@
 module SPos where
 
+import           Evaluator
 import           Types
 
 data Pos -- positivity
   = SPos
   | NSPos
   deriving (Eq, Show)
--- -- check that recursive data argument n and the spos declared parameter variables are only used strictly positvly
+
+-- -- check that recursive data argument n and
+-- -- the spos declared parameter variables are only used strictly positively
 -- sposConstructor :: Name -> Int -> [Pos] -> Value -> TypeCheck ()
 -- sposConstructor n k sp tv =
 --   case tv of
@@ -36,13 +39,12 @@ data Pos -- positivity
 --       l1 = [v | (v, SPos) <- l]
 --       l2 = [v | (v, NSPos) <- l]
 --    in (l1, l2)
--- -- check that a does occurs strictly pos tv
--- -- a may be a "atomic value" ie not pi , lam , app , or succ
--- spos :: Int -> Value -> Value -> TypeCheck Bool
--- spos k a tv -- trace ("noccRecArg " ++ show tv)
---  =
+-- check that a does occurs strictly pos tv
+-- a may be a "atomic value" ie not pi , lam , app , or succ
+-- spos :: Int -> Value -> Value -> Bool
+-- spos ii a tv =
 --   case tv of
---     VPi x av env b -> do
+--     VPi x av -> do
 --       no <- nocc k a av
 --       if no
 --         then do
@@ -74,3 +76,14 @@ data Pos -- positivity
 --       nl <- mapM (nocc k a) vl
 --       return $ n && and nl
 --     _ -> return True
+-- check that a does not occur in tv (right of arrow)
+-- a may be a "atomic value" i.e not pi , lam , app , or succ
+nocc :: Int -> Value -> Value -> Bool
+nocc k a tv =
+  case tv of
+    VPi x result ->
+      if nocc k a result
+        then nocc (k + 1) a (iEval (VPi x result))
+        else return False
+    VLam fn -> nocc (k + 1) a (iEval (VLam fn))
+    _ -> return $ a /= tv

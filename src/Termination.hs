@@ -15,6 +15,8 @@ data TypeSig =
 
 type TBind = (Name, ITerm)
 
+-- A telescope (context) is a sequence of types
+-- where later types may depend on elements of previous types.
 type Telescope = [TBind]
 
 data Declaration =
