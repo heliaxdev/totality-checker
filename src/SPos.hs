@@ -83,7 +83,7 @@ nocc k a tv =
   case tv of
     VPi x result ->
       if nocc k a result
-        then nocc (k + 1) a (iEval (VPi x result))
+        then nocc (k + 1) a (iEval (VPi x result)) -- FIXME:no env to pass here!
         else return False
     VLam fn -> nocc (k + 1) a (iEval (VLam fn))
     _ -> return $ a /= tv
