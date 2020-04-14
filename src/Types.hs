@@ -34,13 +34,13 @@ data Value
   -- extensions for size type
   | VSize -- size type
   | VInfty -- size limit
-  | VSuccS Value -- size successor
+  | VSucc Value -- size successor
   deriving (Eq)
 
 -- size successor: s infty = infty
 sinfty :: Value -> Value
 sinfty VInfty = VInfty
-sinfty v      = VSuccS v
+sinfty v      = VSucc v
 
 instance Show Value where
   show VStar = "* "
@@ -55,7 +55,7 @@ instance Show Value where
   show (VGen k) = show k
   show VSize = "Size"
   show VInfty = "∞"
-  show (VSuccS s) = "(Size S " <> " " <> show s <> ")"
+  show (VSucc s) = "(Size S " <> " " <> show s <> ")"
 
 showVals :: [Value] -> String
 showVals []     = ""

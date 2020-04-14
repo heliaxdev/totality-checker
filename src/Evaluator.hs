@@ -31,3 +31,25 @@ lookupEnv ((x, v):xs) n =
   if x == n
     then v
     else lookupEnv xs n
+
+-- check that a does not occur in tv
+-- a may be a "atomic value" i.e not pi , lam , app , or succ
+nocc :: Int -> Value -> Value -> TypeCheck Bool
+nocc k a tv =
+  case tv of
+    VPi x av env b -> do
+      no <- nocc k a av
+      if no
+        then do
+          bv <- eval (updateEnv env x (VGen k)) b
+          nocc (k + 1) a bv
+        else return False
+    VLam x env b -> do
+      bv <- eval (updateEnv env x (VGen k)) b
+      nocc (k + 1) a bv
+    VSucc v -> nocc k a v
+    VApp v1 vl -> do
+      n <- nocc k a v1
+      nl <- mapM (nocc k a) vl
+      return $ n && and nl
+    _ -> return $ a /= tv
