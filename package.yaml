@@ -16,10 +16,12 @@ dependencies:
 - base >= 4.7 && < 5
 - mtl
 - Cabal
+- containers
 
 default-extensions:
   - DeriveGeneric
   - UnicodeSyntax
+  - OverloadedStrings
 
 library:
   source-dirs: src
