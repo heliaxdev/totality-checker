@@ -17,7 +17,7 @@ eval env (Pi name ty e) = do
   return $ VPi name ety env e
 -- evaluation of size type
 eval _env Size = return VSize -- size type
-eval env (SuccS s) = do
+eval env (Succ s) = do
   vs <- eval env s
   return $ sinfty vs -- size successor
 eval _env Infty = return VInfty -- size infinity (limit size)

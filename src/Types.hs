@@ -13,7 +13,7 @@ data Expr
   | App Expr [Expr] -- application
   -- size type for termination checking
   | Size -- size type
-  | SuccS Expr -- size successor
+  | Succ Expr -- size successor
   | Infty -- size infinity (limit size)
   deriving (Show, Eq)
 
@@ -72,9 +72,12 @@ type Env = [(Name, Value)]
 
 type Signature = Map.Map Name SigDef
 
-data SigDef
-  = FunSig Value [Clause] Bool --type, clauses, whether it's type checked
-  | DataSig Int [Pos] Sized Value -- # parameters, positivity of parameters, sized, type
+data SigDef -- A signature is a mapping of constants to its info
+  --function constant to its type, clauses, whether it's type checked
+  = FunSig Value [Clause] Bool
+  | ConSig Value -- constructor constant to its type
+  -- data type constant to # parameters, positivity of parameters, sized, type
+  | DataSig Int [Pos] Sized Value
   deriving (Show)
 
 data Pos -- positivity
@@ -135,9 +138,6 @@ lookupSig n sig =
     Nothing -> error $ "Error not in signature: " <> show n <> " " <> show sig
     Just k -> k
 
--- fromMaybe
---     (error $ "Error not in signature: " <> n <> " " <> show sig)
---     (Map.lookup n sig)
 addSig :: Signature -> Name -> SigDef -> Signature
 addSig sig n def = Map.insert n def sig
 
