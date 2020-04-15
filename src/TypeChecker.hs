@@ -1,9 +1,6 @@
 -- Sized typed built on top of LambdaPi
 module TypeChecker where
 
-import           Control.Monad.Except
-
-import           Evaluator
 import           Prelude
 import           Types
 

@@ -7,9 +7,9 @@ eval env (App e es) = do
   v <- eval env e
   vs <- mapM (eval env) es
   return $ VApp v vs
-eval env Star = return VStar
-eval env (Con name) = return $ VCon name
-eval env (Def name) = return $ VDef name
+eval _env Star = return VStar
+eval _env (Con name) = return $ VCon name
+eval _env (Def name) = return $ VDef name
 eval env (Var name) = return $ lookupEnv env name
 eval env (Lam x e) = return $ VLam x env e
 eval env (Pi name ty e) = do

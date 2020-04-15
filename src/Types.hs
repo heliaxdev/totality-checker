@@ -121,10 +121,6 @@ teleToType :: Telescope -> Type -> Type
 teleToType [] t            = t
 teleToType ((n, t):tel) t2 = Pi n t (teleToType tel t2)
 
-splitTeleType :: Int -> (Telescope, Type) -> (Telescope, Type)
-splitTeleType 0 (tel, t)         = (tel, t)
-splitTeleType k (tel, Pi n t t2) = splitTeleType (k - 1) (tel <> [(n, t)], t2)
-
 typeToTele :: Type -> (Telescope, Type)
 typeToTele t = ttt t []
   where
@@ -132,6 +128,7 @@ typeToTele t = ttt t []
     ttt (Pi n t' t2) tel = ttt t2 (tel <> [(n, t')])
     ttt x tel            = (tel, x)
 
+emptySig :: Map.Map k a
 emptySig = Map.empty
 
 lookupSig :: Name -> Signature -> SigDef

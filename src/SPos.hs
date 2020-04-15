@@ -16,7 +16,7 @@ sposConstructor n k sp (VPi x av env b) = do
       sposConstructor n (k + 1) sp bv
     (False, _) -> error "rec. arg not strictly positive"
     (True, False) -> error "parameter not strictly positive"
-sposConstructor n k sp _ = return ()
+sposConstructor _n _k _sp _ = return ()
 
 sposVals :: [Value] -> Value -> TypeCheck Bool
 sposVals vals tv = do
@@ -24,7 +24,7 @@ sposVals vals tv = do
   return $ and sl
 
 posGen :: Int -> [Pos] -> [Value]
-posGen i [] = []
+posGen _i [] = []
 posGen i (p:pl) =
   case p of
     SPos  -> VGen i : posGen (i + 1) pl
@@ -72,4 +72,4 @@ spos k a (VApp v' vl) =
       n <- nocc k a v'
       nl <- mapM (nocc k a) vl
       return $ n && and nl
-spos k a _ = return True
+spos _k _a _ = return True
