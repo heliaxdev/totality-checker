@@ -1,8 +1,6 @@
 module Termination where
 
 import           GHC.Generics (Generic)
-import           SPos
-import           Types
 
 data Totality
   = Total [Int] -- well-founded arguments

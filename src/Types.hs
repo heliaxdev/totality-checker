@@ -17,9 +17,7 @@ data Expr
   | Infty -- size infinity (limit size)
   deriving (Show, Eq)
 
-data Name =
-  String
-  deriving (Show, Eq, Ord)
+type Name = String
 
 data Value
   = VStar

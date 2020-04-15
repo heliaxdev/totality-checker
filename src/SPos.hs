@@ -38,7 +38,7 @@ posArgs vl pl =
    in (l1, l2)
 
 -- check that a does occurs strictly pos tv
--- a may be a "atomic value" ie not pi , lam , app , or succ
+-- a may be a "atomic value" ie not pi, lam, app, or succ
 spos :: Int -> Value -> Value -> TypeCheck Bool
 spos k a (VPi x av env b) = do
   no <- nocc k a av
