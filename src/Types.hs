@@ -112,10 +112,10 @@ data Clause =
   deriving (Eq, Show)
 
 data Pattern
-  = VarP Name
-  | ConP Name [Pattern]
-  | SuccP Pattern
-  | DotP Expr
+  = VarP Name -- variable pattern
+  | ConP Name [Pattern] -- constructor pattern
+  | SuccP Pattern -- size successor pattern
+  | DotP Expr -- inaccessible pattern
   deriving (Eq, Show)
 
 teleToType :: Telescope -> Type -> Type

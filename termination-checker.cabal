@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 9ebe9dff0cdc73d0a69e77ab3d90083347840f9615888494bf3e0cf33e6f8965
+-- hash: 43cace0f3332dbb07f8714049b4fda25db7a503c67d1cf706bf1166a58e41e3d
 
 name:           termination-checker
 version:        0.1.0.0
@@ -28,6 +28,7 @@ source-repository head
 library
   exposed-modules:
       Evaluator
+      Pattern
       SPos
       Termination
       TypeChecker
