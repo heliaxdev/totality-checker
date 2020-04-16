@@ -15,14 +15,14 @@ checkExpr k rho gamma (Pi n t1 t2) VStar = do
   v_t1 <- eval rho t1
   checkExpr (k + 1) (updateEnv rho n (VGen k)) (updateEnv gamma n v_t1) t2 VStar
 checkExpr k rho gamma (Succ e2) VSize = checkExpr k rho gamma e2 VSize
-checkExpr k rho gamma e@_ _ = undefined
+checkExpr _k _rho _gamma e@_ _ = undefined
 
 --   v2 <- inferExpr k rho gamma e
 --   leqVal k v2 v
 inferExpr :: Int -> Env -> Env -> Expr -> TypeCheck Value
-inferExpr k rho gamma (Var x) = return $ lookupEnv gamma x
+inferExpr _k _rho gamma (Var x) = return $ lookupEnv gamma x
       --Size -> return VSet
-inferExpr k rho gamma Infty = return VSize
+inferExpr _k _rho _gamma Infty = return VSize
 inferExpr k rho gamma (App e1 [e2]) = do
   v <- inferExpr k rho gamma e1
   case v of
@@ -35,23 +35,44 @@ inferExpr k rho gamma (App e1 [e2]) = do
       "inferExpr : expected Pi with expression : " <> show e1 <> "," <> show v
 inferExpr k rho gamma (App e1 (e2:el)) =
   inferExpr k rho gamma (App (App e1 [e2]) el)
-inferExpr k rho gamma (Def n) = do
+inferExpr _k _rho _gamma (Def n) = do
   sig <- get
   case lookupSig n sig of
     (DataSig _ _ _ tv) -> return tv
-    (FunSig tv _ _)    -> return tv
-inferExpr k rho gamma (Con n) = do
+    (FunSig tv _ _) -> return tv
+    (ConSig tv) ->
+      error $
+      "inferExpr: expecting type from data or function signature " <>
+      show (Def n) <>
+      " but found " <>
+      show tv <>
+      " from constructor signature. "
+inferExpr _k _rho _gamma (Con n) = do
   sig <- get
   case lookupSig n sig of
     (ConSig tv) -> return tv
-inferExpr k rho gamma e = error $ "cannot infer type " <> show e
+    (DataSig _ _ _ tv) ->
+      error $
+      "inferExpr: expecting type from data or function signature " <>
+      show (Con n) <>
+      " but found " <>
+      show tv <>
+      " from data type signature. "
+    (FunSig tv _ _) ->
+      error $
+      "inferExpr: expecting type from data or function signature " <>
+      show (Con n) <>
+      " but found " <>
+      show tv <>
+      " from function signature. "
+inferExpr _k _rho _gamma e = error $ "cannot infer type " <> show e
 
 checkT :: Expr -> TypeCheck ()
 checkT = checkType 0 [] []
 
 checkType :: Int -> Env -> Env -> Expr -> TypeCheck ()
-checkType k rho gamma Star = return ()
-checkType k rho gamma Size = return ()
+checkType _k _rho _gamma Star = return ()
+checkType _k _rho _gamma Size = return ()
 checkType k rho gamma (Pi x t1 t2) = do
   checkType k rho gamma t1
   v_t1 <- eval rho t1
