@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8c866a801fbab261bdc6365f1e22186826f79e15e2a4a771d3d1cecacc7ee331
+-- hash: 9ebe9dff0cdc73d0a69e77ab3d90083347840f9615888494bf3e0cf33e6f8965
 
 name:           termination-checker
 version:        0.1.0.0
@@ -36,7 +36,7 @@ library
       Paths_termination_checker
   hs-source-dirs:
       src
-  default-extensions: DeriveGeneric UnicodeSyntax OverloadedStrings
+  default-extensions: DeriveGeneric UnicodeSyntax OverloadedStrings ScopedTypeVariables
   build-depends:
       Cabal
     , base >=4.7 && <5
@@ -50,7 +50,7 @@ executable termination-checker-exe
       Paths_termination_checker
   hs-source-dirs:
       app
-  default-extensions: DeriveGeneric UnicodeSyntax OverloadedStrings
+  default-extensions: DeriveGeneric UnicodeSyntax OverloadedStrings ScopedTypeVariables
   ghc-options: -Wall
   build-depends:
       Cabal
@@ -67,7 +67,7 @@ test-suite termination-checker-test
       Paths_termination_checker
   hs-source-dirs:
       test
-  default-extensions: DeriveGeneric UnicodeSyntax OverloadedStrings
+  default-extensions: DeriveGeneric UnicodeSyntax OverloadedStrings ScopedTypeVariables
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       Cabal

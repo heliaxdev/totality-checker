@@ -21,20 +21,26 @@ checkExpr _k _rho _gamma e@_ _ = undefined
 --   leqVal k v2 v
 inferExpr :: Int -> Env -> Env -> Expr -> TypeCheck Value
 inferExpr _k _rho gamma (Var x) = return $ lookupEnv gamma x
-      --Size -> return VSet
-inferExpr _k _rho _gamma Infty = return VSize
-inferExpr k rho gamma (App e1 [e2]) = do
-  v <- inferExpr k rho gamma e1
-  case v of
-    VPi x av env b -> do
-      checkExpr k rho gamma e2 av
-      v2 <- eval rho e2
-      eval (updateEnv env x v2) b
-    _ ->
+inferExpr k rho gamma (App e1 e2) =
+  case e2 of
+    [] ->
       error $
-      "inferExpr : expected Pi with expression : " <> show e1 <> "," <> show v
-inferExpr k rho gamma (App e1 (e2:el)) =
-  inferExpr k rho gamma (App (App e1 [e2]) el)
+      "inferExpr : App is applied to an empty list of expressions: " <> show e1 <>
+      " is applied to " <>
+      show e2 <>
+      ", which is empty."
+    [e] -> do
+      v <- inferExpr k rho gamma e1
+      case v of
+        VPi x av env b -> do
+          checkExpr k rho gamma e av
+          v2 <- eval rho e
+          eval (updateEnv env x v2) b
+        _ ->
+          error $
+          "inferExpr : expected Pi with expression : " <> show e1 <> "," <>
+          show v
+    (hd:tl) -> inferExpr k rho gamma (App (App e1 [hd]) tl)
 inferExpr _k _rho _gamma (Def n) = do
   sig <- get
   case lookupSig n sig of
@@ -65,7 +71,7 @@ inferExpr _k _rho _gamma (Con n) = do
       " but found " <>
       show tv <>
       " from function signature. "
-inferExpr _k _rho _gamma e = error $ "cannot infer type " <> show e
+inferExpr _k _rho _gamma e = error $ "inferExpr: cannot infer type " <> show e
 
 checkT :: Expr -> TypeCheck ()
 checkT = checkType 0 [] []
