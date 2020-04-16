@@ -15,10 +15,17 @@ checkExpr k rho gamma (Pi n t1 t2) VStar = do
   v_t1 <- eval rho t1
   checkExpr (k + 1) (updateEnv rho n (VGen k)) (updateEnv gamma n v_t1) t2 VStar
 checkExpr k rho gamma (Succ e2) VSize = checkExpr k rho gamma e2 VSize
-checkExpr _k _rho _gamma e@_ _ = undefined
+checkExpr k rho gamma e v = do
+  ev <- inferExpr k rho gamma e
+  unless
+    (ev == v)
+    (error $
+     "Type mismatched. \n" <> show e <> " \n (binder number " <> show k <>
+     ") is of type \n" <>
+     show ev <>
+     "\n but the expected type is " <>
+     show v)
 
---   v2 <- inferExpr k rho gamma e
---   leqVal k v2 v
 inferExpr :: Int -> Env -> Env -> Expr -> TypeCheck Value
 inferExpr _k _rho gamma (Var x) = return $ lookupEnv gamma x
 inferExpr k rho gamma (App e1 e2) =
@@ -71,16 +78,6 @@ inferExpr _k _rho _gamma (Con n) = do
       " but found " <>
       show tv <>
       " from function signature. "
-inferExpr _k _rho _gamma e = error $ "inferExpr: cannot infer type " <> show e
-
-checkT :: Expr -> TypeCheck ()
-checkT = checkType 0 [] []
-
-checkType :: Int -> Env -> Env -> Expr -> TypeCheck ()
-checkType _k _rho _gamma Star = return ()
-checkType _k _rho _gamma Size = return ()
-checkType k rho gamma (Pi x t1 t2) = do
-  checkType k rho gamma t1
-  v_t1 <- eval rho t1
-  checkType (k + 1) (updateEnv rho x (VGen k)) (updateEnv gamma x v_t1) t2
-checkType k rho gamma e = checkExpr k rho gamma e VStar
+-- Pi, Lam, Size types, Star cannot be inferred
+inferExpr _k _rho _gamma e =
+  error $ "inferExpr: cannot infer the type of " <> show e
