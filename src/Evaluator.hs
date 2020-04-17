@@ -75,13 +75,16 @@ matchClause env (p:pl) rhs (v:vl) = do
     Nothing   -> return Nothing
 matchClause _ _ _ [] = return Nothing
 
+--returns an environment that binds the variables in the patterns to values
 match :: Env -> Pattern -> Value -> TypeCheck (Maybe Env)
 match env (DotP _) _ = return $ Just env
 match env (VarP x) v = return $ Just (updateEnv env x v)
 match env (ConP name []) (VCon y)
   | name == y = return $ Just env
+  | otherwise = return Nothing
 match env (ConP name pl) (VApp (VCon y) vl)
   | name == y = matchList env pl vl
+  | otherwise = return Nothing
 match env (SuccP p') VInfty = match env p' VInfty
 match env (SuccP p') (VSucc v') = match env p' v'
 match _env _p _v = return Nothing
