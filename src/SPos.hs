@@ -4,6 +4,9 @@ import           Control.Monad.State
 import           Evaluator
 import           Types
 
+-- to check data type declarations, one has to check
+-- strict positivity of the constructors.
+--
 -- check that recursive data argument n and
 -- the spos declared parameter variables are only used strictly positively
 sposConstructor :: Name -> Int -> [Pos] -> Value -> TypeCheck ()

@@ -54,14 +54,12 @@ appDef n vl = do
 
 -- pattern matching
 matchClauses :: [Clause] -> [Value] -> TypeCheck (Maybe Value)
-matchClauses cl cll = loop cl
-  where
-    loop [] = return Nothing
-    loop (Clause pl rhs:cl2) = do
-      x <- matchClause [] pl rhs cll
-      case x of
-        Nothing -> loop cl2
-        Just v  -> return $ Just v
+matchClauses [] _cll = return Nothing
+matchClauses (Clause pl rhs:cl2) cll = do
+  x <- matchClause [] pl rhs cll
+  case x of
+    Nothing -> matchClauses cl2 cll
+    Just v  -> return $ Just v
 
 matchClause :: Env -> [Pattern] -> Expr -> [Value] -> TypeCheck (Maybe Value)
 matchClause env [] rhs vl = do
