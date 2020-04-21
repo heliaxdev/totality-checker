@@ -91,19 +91,15 @@ data Sized -- distinguish between sized and not sized data type.
   deriving (Eq, Show)
 
 data Declaration
-  = DataDecl Name Sized [Pos] Telescope Type [Constructor]
+  = DataDecl Name Sized [Pos] Telescope Expr [TypeSig]
   | FunDecl [(TypeSig, [Clause])]
   deriving (Eq, Show)
 
 data TypeSig =
-  TypeSig Name Type
+  TypeSig Name Expr
   deriving (Eq, Show)
 
-type Type = Expr
-
-type Constructor = TypeSig
-
-type TBind = (Name, Type)
+type TBind = (Name, Expr)
 
 type Telescope = [TBind]
 
