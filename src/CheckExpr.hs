@@ -1,10 +1,12 @@
 module CheckExpr where
 
+import           Control.Monad.Except
 import           Control.Monad.State
 import           Evaluator
 import           Prelude
 import           Types
 
+-- checks that input Expr has the type v (second input)
 checkExpr :: Int -> Env -> Env -> Expr -> Value -> TypeCheck ()
 checkExpr k rho gamma (Lam n e1) (VPi x va env t1) = do
   v_t1 <- eval (updateEnv env x (VGen k)) t1
@@ -25,6 +27,7 @@ checkExpr k rho gamma e v = do
      "\n but the expected type is " <>
      show v)
 
+-- checks that input Expr is correct and infers its type value v
 inferExpr :: Int -> Env -> Env -> Expr -> TypeCheck Value
 inferExpr _k _rho gamma (Var x) = return $ lookupEnv gamma x
 inferExpr k rho gamma (App e1 e2) =
@@ -80,4 +83,3 @@ inferExpr _k _rho _gamma (Con n) = do
 -- Pi, Lam, Size types, Star cannot be inferred
 inferExpr _k _rho _gamma e =
   error $ "inferExpr: cannot infer the type of " <> show e
--- type check a function

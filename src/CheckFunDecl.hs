@@ -1,3 +1,2 @@
 module CheckFunDecl where
-
-import           Types
+-- import           Types
