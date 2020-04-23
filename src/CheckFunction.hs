@@ -1,2 +1,2 @@
-module CheckFunDecl where
+module CheckFunction where
 -- import           Types

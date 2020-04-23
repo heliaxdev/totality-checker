@@ -1,7 +1,7 @@
 module TypeChecker where
 
-import           CheckDataDecl
-import           CheckFunDecl
+import           CheckDataType
+import           CheckFunction
 import           Control.Monad.State
 import           Evaluator
 import           Prelude
@@ -14,6 +14,7 @@ import           Types
 -- 4. check declarations (including data declaration and function declaration)
 --
 typeCheckDeclaration :: Declaration -> TypeCheck ()
+-- DataDecl Name Sized [Pos] Telescope Expr [TypeSig]
 typeCheckDeclaration (DataDecl n sz pos tel t cs) = do
   sig <- get
   let dt = teleToType tel t

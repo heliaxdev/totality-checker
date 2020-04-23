@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 69439b16e9723139ff257fef44bae1c14eec952b9dca3c6773e68ca28553cb57
+-- hash: 903aa561d236985f179a56c4b9c274e6eca070b843e8b954283f2e9ac7b25915
 
 name:           termination-checker
 version:        0.1.0.0
@@ -27,9 +27,9 @@ source-repository head
 
 library
   exposed-modules:
-      CheckDataDecl
+      CheckDataType
       CheckExpr
-      CheckFunDecl
+      CheckFunction
       Evaluator
       Pattern
       SPos
