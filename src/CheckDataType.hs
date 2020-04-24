@@ -34,20 +34,6 @@ typeToTele t = ttt t []
     ttt (Pi n t' t2) tel = ttt t2 (tel <> [(n, t')])
     ttt x tel            = (tel, x)
 
--- checks that input Expr denotes a valid type
-checkType :: Int -> Env -> Env -> Expr -> TypeCheck ()
-checkType _k _rho _gamma Star = return ()
-checkType _k _rho _gamma Size = return ()
-checkType k rho gamma (Pi x t1 t2) = do
-  checkType k rho gamma t1
-  v_t1 <- eval rho t1
-  checkType (k + 1) (updateEnv rho x (VGen k)) (updateEnv gamma x v_t1) t2
-checkType k rho gamma e = checkExpr k rho gamma e VStar
-
--- check that input Expr is a star type
-checkSType :: Int -> Env -> Env -> Expr -> TypeCheck ()
-checkSType k rho gamma e = checkExpr k rho gamma e VStar
-
 -- check data type
 -- check that params are types
 -- check that arguments are stypes

@@ -83,3 +83,20 @@ inferExpr _k _rho _gamma (Con n) = do
 -- Pi, Lam, Size types, Star cannot be inferred
 inferExpr _k _rho _gamma e =
   error $ "inferExpr: cannot infer the type of " <> show e
+
+-- checks that input Expr denotes a valid type
+checkType :: Int -> Env -> Env -> Expr -> TypeCheck ()
+checkType _k _rho _gamma Star = return ()
+checkType _k _rho _gamma Size = return ()
+checkType k rho gamma (Pi x t1 t2) = do
+  checkType k rho gamma t1
+  v_t1 <- eval rho t1
+  checkType (k + 1) (updateEnv rho x (VGen k)) (updateEnv gamma x v_t1) t2
+checkType k rho gamma e = checkExpr k rho gamma e VStar
+
+checkType0 :: Expr -> TypeCheck ()
+checkType0 = checkType 0 [] []
+
+-- check that input Expr is a star type
+checkSType :: Int -> Env -> Env -> Expr -> TypeCheck ()
+checkSType k rho gamma e = checkExpr k rho gamma e VStar
