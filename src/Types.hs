@@ -116,7 +116,7 @@ data Pattern
   | DotP Expr -- inaccessible pattern
   deriving (Eq, Show)
 
-emptySig :: Map.Map k a
+emptySig :: Signature
 emptySig = Map.empty
 
 lookupSig :: Name -> Signature -> SigDef

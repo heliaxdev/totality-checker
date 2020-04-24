@@ -52,12 +52,12 @@ checkDataType _k _rho _gamma _p e = error $ show e <> "doesn't target Star"
 -- check that arguments are stypes
 -- check that result is a star
 --  ( params were already checked by checkDataType )
-checkConType :: Int -> Env -> Env -> Int -> Expr -> TypeCheck ()
+checkConType :: Int -> Env -> Env -> Int -> Expr -> TypeCheck (Either String ())
 checkConType k rho gamma p e =
   case e of
     Pi x t1 t2 -> do
       if k < p
-        then return ()
+        then return $ Right ()
         else checkSType k rho gamma t1
       v_t1 <- eval rho t1
       checkConType

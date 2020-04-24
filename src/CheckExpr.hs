@@ -7,7 +7,7 @@ import           Prelude
 import           Types
 
 -- checks that input Expr has the type v (second input)
-checkExpr :: Int -> Env -> Env -> Expr -> Value -> TypeCheck ()
+checkExpr :: Int -> Env -> Env -> Expr -> Value -> TypeCheck (Either String ())
 checkExpr k rho gamma (Lam n e1) (VPi x va env t1) = do
   v_t1 <- eval (updateEnv env x (VGen k)) t1
   checkExpr (k + 1) (updateEnv rho n (VGen k)) (updateEnv gamma n va) e1 v_t1
@@ -18,14 +18,15 @@ checkExpr k rho gamma (Pi n t1 t2) VStar = do
 checkExpr k rho gamma (Succ e2) VSize = checkExpr k rho gamma e2 VSize
 checkExpr k rho gamma e v = do
   ev <- inferExpr k rho gamma e
-  unless
-    (ev == v)
-    (error $
-     "Type mismatched. \n" <> show e <> " \n (binder number " <> show k <>
-     ") is of type \n" <>
-     show ev <>
-     "\n but the expected type is " <>
-     show v)
+  if ev == v
+    then return $ Right ()
+    else return $
+         Left
+           ("Type mismatched. \n" <> show e <> " \n (binder number " <> show k <>
+            ") is of type \n" <>
+            show ev <>
+            "\n but the expected type is " <>
+            show v)
 
 -- checks that input Expr is correct and infers its type value v
 inferExpr :: Int -> Env -> Env -> Expr -> TypeCheck Value
@@ -85,18 +86,18 @@ inferExpr _k _rho _gamma e =
   error $ "inferExpr: cannot infer the type of " <> show e
 
 -- checks that input Expr denotes a valid type
-checkType :: Int -> Env -> Env -> Expr -> TypeCheck ()
-checkType _k _rho _gamma Star = return ()
-checkType _k _rho _gamma Size = return ()
+checkType :: Int -> Env -> Env -> Expr -> TypeCheck (Either String ())
+checkType _k _rho _gamma Star = return $ Right ()
+checkType _k _rho _gamma Size = return $ Right ()
 checkType k rho gamma (Pi x t1 t2) = do
   checkType k rho gamma t1
   v_t1 <- eval rho t1
   checkType (k + 1) (updateEnv rho x (VGen k)) (updateEnv gamma x v_t1) t2
 checkType k rho gamma e = checkExpr k rho gamma e VStar
 
-checkType0 :: Expr -> TypeCheck ()
+checkType0 :: Expr -> TypeCheck (Either String ())
 checkType0 = checkType 0 [] []
 
 -- check that input Expr is a star type
-checkSType :: Int -> Env -> Env -> Expr -> TypeCheck ()
+checkSType :: Int -> Env -> Env -> Expr -> TypeCheck (Either String ())
 checkSType k rho gamma e = checkExpr k rho gamma e VStar
