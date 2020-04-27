@@ -18,23 +18,28 @@ checkExpr k rho gamma (Pi n t1 t2) VStar = do
 checkExpr k rho gamma (Succ e2) VSize = checkExpr k rho gamma e2 VSize
 checkExpr k rho gamma e v = do
   ev <- inferExpr k rho gamma e
-  if ev == v
-    then return $ Right ()
-    else return $
-         Left
-           ("Type mismatched. \n" <> show e <> " \n (binder number " <> show k <>
-            ") is of type \n" <>
-            show ev <>
-            "\n but the expected type is " <>
-            show v)
+  case ev of
+    Right inferredType ->
+      if inferredType == v
+        then return $ Right ()
+        else return $
+             Left
+               ("Type mismatched. \n" <> show e <> " \n (binder number " <>
+                show k <>
+                ") is of type \n" <>
+                show ev <>
+                "\n but the expected type is " <>
+                show v)
+    Left error -> return $ Left $ "Error while inferring " <> show e <> error
 
 -- checks that input Expr is correct and infers its type value v
-inferExpr :: Int -> Env -> Env -> Expr -> TypeCheck Value
-inferExpr _k _rho gamma (Var x) = return $ lookupEnv gamma x
+inferExpr :: Int -> Env -> Env -> Expr -> TypeCheck (Either String Value)
+inferExpr _k _rho gamma (Var x) = return $ Right $ lookupEnv gamma x
 inferExpr k rho gamma (App e1 e2) =
   case e2 of
     [] ->
-      error $
+      return $
+      Left $
       "inferExpr : App is applied to an empty list of expressions: " <> show e1 <>
       " is applied to " <>
       show e2 <>
@@ -42,23 +47,29 @@ inferExpr k rho gamma (App e1 e2) =
     [e] -> do
       v <- inferExpr k rho gamma e1
       case v of
-        VPi x av env b -> do
+        Right (VPi x av env b) -> do
           checkExpr k rho gamma e av
           v2 <- eval rho e
-          eval (updateEnv env x v2) b
-        _ ->
-          error $
-          "inferExpr : expected Pi with expression : " <> show e1 <> "," <>
+          updateV2 <- eval (updateEnv env x v2) b
+          return $ Right updateV2
+        Left error ->
+          return $
+          Left $
+          "Error while inferring an expression: " <> show e1 <> error <>
+          "inferExpr : expected Pi with expression : " <>
+          show e1 <>
+          "," <>
           show v
     (hd:tl) -> inferExpr k rho gamma (App (App e1 [hd]) tl)
 inferExpr _k _rho _gamma (Def n) = do
   sig <- get
   case lookupSig n sig of
-    (DataSig _ _ _ tv) -> return tv
-    (FunSig tv _ _) -> return tv
+    (DataSig _ _ _ tv) -> return $ Right tv
+    (FunSig tv _ _) -> return $ Right tv
     (ConSig tv) ->
-      error $
-      "inferExpr: expecting type from data or function signature " <>
+      return $
+      Left $
+      "Error while inferring an expression: expecting type from data or function signature " <>
       show (Def n) <>
       " but found " <>
       show tv <>
@@ -66,24 +77,28 @@ inferExpr _k _rho _gamma (Def n) = do
 inferExpr _k _rho _gamma (Con n) = do
   sig <- get
   case lookupSig n sig of
-    (ConSig tv) -> return tv
+    (ConSig tv) -> return $ Right tv
     (DataSig _ _ _ tv) ->
-      error $
-      "inferExpr: expecting type from data or function signature " <>
+      return $
+      Left $
+      "Error while inferring an expression: expecting type from data or function signature " <>
       show (Con n) <>
       " but found " <>
       show tv <>
       " from data type signature. "
     (FunSig tv _ _) ->
-      error $
-      "inferExpr: expecting type from data or function signature " <>
+      return $
+      Left $
+      "Error while inferring an expression: expecting type from data or function signature " <>
       show (Con n) <>
       " but found " <>
       show tv <>
       " from function signature. "
 -- Pi, Lam, Size types, Star cannot be inferred
 inferExpr _k _rho _gamma e =
-  error $ "inferExpr: cannot infer the type of " <> show e
+  return $
+  Left $
+  "Error while inferring an expression: cannot infer the type of " <> show e
 
 -- checks that input Expr denotes a valid type
 checkType :: Int -> Env -> Env -> Expr -> TypeCheck (Either String ())
