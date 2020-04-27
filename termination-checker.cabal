@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 903aa561d236985f179a56c4b9c274e6eca070b843e8b954283f2e9ac7b25915
+-- hash: c1d89205b91b36679560fca792ce981627452f10f6bb4e2f9f111aa9cafd5d9b
 
 name:           termination-checker
 version:        0.1.0.0
@@ -43,6 +43,7 @@ library
   default-extensions: DeriveGeneric UnicodeSyntax OverloadedStrings ScopedTypeVariables
   build-depends:
       Cabal
+    , HUnit
     , base >=4.7 && <5
     , containers
     , mtl
@@ -58,6 +59,7 @@ executable termination-checker-exe
   ghc-options: -Wall
   build-depends:
       Cabal
+    , HUnit
     , base >=4.7 && <5
     , containers
     , mtl
@@ -75,6 +77,7 @@ test-suite termination-checker-test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       Cabal
+    , HUnit
     , base >=4.7 && <5
     , containers
     , mtl

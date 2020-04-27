@@ -40,7 +40,7 @@ inferExpr k rho gamma (App e1 e2) =
     [] ->
       return $
       Left $
-      "inferExpr : App is applied to an empty list of expressions: " <> show e1 <>
+      "InferExpr: App is applied to an empty list of expressions: " <> show e1 <>
       " is applied to " <>
       show e2 <>
       ", which is empty."
@@ -55,8 +55,8 @@ inferExpr k rho gamma (App e1 e2) =
         Left error ->
           return $
           Left $
-          "Error while inferring an expression: " <> show e1 <> error <>
-          "inferExpr : expected Pi with expression : " <>
+          "InferExpr: " <> show e1 <> error <>
+          "InferExpr: expected Pi with expression : " <>
           show e1 <>
           "," <>
           show v
@@ -69,7 +69,7 @@ inferExpr _k _rho _gamma (Def n) = do
     (ConSig tv) ->
       return $
       Left $
-      "Error while inferring an expression: expecting type from data or function signature " <>
+      "InferExpr: expecting type from data or function signature " <>
       show (Def n) <>
       " but found " <>
       show tv <>
@@ -81,7 +81,7 @@ inferExpr _k _rho _gamma (Con n) = do
     (DataSig _ _ _ tv) ->
       return $
       Left $
-      "Error while inferring an expression: expecting type from data or function signature " <>
+      "InferExpr: expecting type from data or function signature " <>
       show (Con n) <>
       " but found " <>
       show tv <>
@@ -89,16 +89,14 @@ inferExpr _k _rho _gamma (Con n) = do
     (FunSig tv _ _) ->
       return $
       Left $
-      "Error while inferring an expression: expecting type from data or function signature " <>
+      "InferExpr: expecting type from data or function signature " <>
       show (Con n) <>
       " but found " <>
       show tv <>
       " from function signature. "
 -- Pi, Lam, Size types, Star cannot be inferred
 inferExpr _k _rho _gamma e =
-  return $
-  Left $
-  "Error while inferring an expression: cannot infer the type of " <> show e
+  return $ Left $ "InferExpr: cannot infer the type of " <> show e
 
 -- checks that input Expr denotes a valid type
 checkType :: Int -> Env -> Env -> Expr -> TypeCheck (Either String ())

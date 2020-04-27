@@ -1,15 +1,17 @@
 import           CheckExpr
 import           Control.Exception
 import           Control.Monad.State.Lazy
+import qualified Test.HUnit               as T
 import           Types
 
-checkExprResult :: Either String () -> String
-checkExprResult r =
-  case r of
-    Right _    -> "()"
-    Left error -> error
+testTypeStar :: T.Test
+testTypeStar =
+  T.TestCase
+    (do r <- evalStateT (checkType 0 [] [] Star) emptySig
+        T.assertEqual "should return" r (Right ()))
 
-main :: IO ()
+testlist = T.TestList [T.TestLabel "testTypeStar" testTypeStar]
+
 main = do
-  r <- evalStateT (checkExpr 0 [] [] Star VSize) emptySig
-  putStrLn $ "`checkExpr 0 [] [] Star VStar` returns " <> checkExprResult r
+  T.runTestTT testlist
+  return ()
