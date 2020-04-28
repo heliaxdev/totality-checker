@@ -12,7 +12,7 @@ checkExpr k rho gamma (Lam n e1) (VPi x va env t1) = do
   v_t1 <- eval (updateEnv env x (VGen k)) t1
   checkExpr (k + 1) (updateEnv rho n (VGen k)) (updateEnv gamma n va) e1 v_t1
 checkExpr k rho gamma (Pi n t1 t2) VStar = do
-  checkExpr k rho gamma t1 VStar
+  _ <- checkExpr k rho gamma t1 VStar
   v_t1 <- eval rho t1
   checkExpr (k + 1) (updateEnv rho n (VGen k)) (updateEnv gamma n v_t1) t2 VStar
 checkExpr k rho gamma (Succ e2) VSize = checkExpr k rho gamma e2 VSize
@@ -30,7 +30,7 @@ checkExpr k rho gamma e v = do
                 show ev <>
                 "\n but the expected type is " <>
                 show v)
-    Left error -> return $ Left $ "Error while inferring " <> show e <> error
+    Left err -> return $ Left $ "Error while inferring " <> show e <> err
 
 -- checks that input Expr is correct and infers its type value v
 inferExpr :: Int -> Env -> Env -> Expr -> TypeCheck (Either String Value)
@@ -48,14 +48,19 @@ inferExpr k rho gamma (App e1 e2) =
       v <- inferExpr k rho gamma e1
       case v of
         Right (VPi x av env b) -> do
-          checkExpr k rho gamma e av
+          _ <- checkExpr k rho gamma e av
           v2 <- eval rho e
           updateV2 <- eval (updateEnv env x v2) b
           return $ Right updateV2
-        Left error ->
+        Right _notFn ->
           return $
           Left $
-          "InferExpr: " <> show e1 <> error <>
+          "InferExpr: expected Pi with expression : " <> show e1 <> "," <>
+          show v
+        Left err ->
+          return $
+          Left $
+          "InferExpr: " <> show e1 <> err <>
           "InferExpr: expected Pi with expression : " <>
           show e1 <>
           "," <>
@@ -103,7 +108,7 @@ checkType :: Int -> Env -> Env -> Expr -> TypeCheck (Either String ())
 checkType _k _rho _gamma Star = return $ Right ()
 checkType _k _rho _gamma Size = return $ Right ()
 checkType k rho gamma (Pi x t1 t2) = do
-  checkType k rho gamma t1
+  _ <- checkType k rho gamma t1
   v_t1 <- eval rho t1
   checkType (k + 1) (updateEnv rho x (VGen k)) (updateEnv gamma x v_t1) t2
 checkType k rho gamma e = checkExpr k rho gamma e VStar

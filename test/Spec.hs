@@ -32,7 +32,7 @@ testType e =
           result
           (Right ()))
 
-testlist =
+testTargetList =
   T.TestList
     [ T.TestLabel "testTypeStar" (testType Star)
     -- a definition matches its name
@@ -42,10 +42,16 @@ testlist =
     , T.TestLabel
         "testTargetAppEl"
         (testTarget "name" [("var", Star)] (App (Def "name") [Var "var"]))
+    -- names that don't match should raise an error
     , T.TestLabel
         "testTargetFailDef"
         (testTargetFail "na" [] (App (Def "name") []))
+    , T.TestLabel
+        "testTargetFailApp"
+        (testTargetFail "name" [("var", Star)] (App (Def "name") [Var "notVar"]))
     ]
+
+testlist = testTargetList
 
 main = do
   T.runTestTT testlist

@@ -21,7 +21,7 @@ addFunSig (TypeSig n t, cl) = do
 
 typeCheckFunSig :: (TypeSig, [Clause]) -> TypeCheck ()
 typeCheckFunSig (TypeSig n t, cl) = do
-  checkType0 t
+  _ <- checkType0 t
   unless (completeFun cl) (error $ n <> " : size pattern incomplete")
 
 typeCheckFunClause :: Int -> (TypeSig, [Clause]) -> TypeCheck ()
