@@ -6,6 +6,15 @@ import qualified Test.HUnit               as T
 import           Test.HUnitPlus.Base      as TP
 import           Types
 
+testType :: Expr -> T.Test
+testType e =
+  T.TestCase
+    (do result <- evalStateT (checkType0 e) emptySig
+        T.assertEqual
+          ("checkType0 " <> show e <> " should return Right ()")
+          result
+          (Right ()))
+
 testTarget :: Name -> Telescope -> Expr -> T.Test
 testTarget name tel e =
   T.TestCase
@@ -23,14 +32,16 @@ testTargetFail name tel e =
        (ErrorCall "anything")
        (evalStateT (checkTarget name tel e) emptySig))
 
-testType :: Expr -> T.Test
-testType e =
+testDataType :: Int -> Env -> Env -> Int -> Expr -> T.Test
+testDataType k rho gamma p e =
   T.TestCase
-    (do result <- evalStateT (checkType0 e) emptySig
+    (do result <- evalStateT (checkDataType k rho gamma p e) emptySig
         T.assertEqual
-          ("checkType0 " <> show e <> " should return Right ()")
+          ("checkDataType " <> show k <> show rho <> show gamma <> show p <>
+           show e <>
+           "should return ()")
           result
-          (Right ()))
+          ())
 
 testTargetList =
   T.TestList
@@ -51,8 +62,13 @@ testTargetList =
         (testTargetFail "name" [("var", Star)] (App (Def "name") [Var "notVar"]))
     ]
 
-testlist = testTargetList
+testDataTypeList =
+  T.TestList [T.TestLabel "testDataTypeStar" (testDataType 0 [] [] 0 Star)]
 
 main = do
-  T.runTestTT testlist
+  putStrLn ""
+  putStrLn "checkTarget tests:"
+  T.runTestTT testTargetList
+  putStrLn "checkDataType tests:"
+  T.runTestTT testDataTypeList
   return ()
