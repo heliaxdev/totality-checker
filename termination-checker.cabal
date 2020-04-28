@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c1d89205b91b36679560fca792ce981627452f10f6bb4e2f9f111aa9cafd5d9b
+-- hash: 700a25fb9d62deff81c47797d7e71b469248261cfda397d359a5750d0f9aba12
 
 name:           termination-checker
 version:        0.1.0.0
@@ -44,6 +44,7 @@ library
   build-depends:
       Cabal
     , HUnit
+    , HUnit-Plus
     , base >=4.7 && <5
     , containers
     , mtl
@@ -60,6 +61,7 @@ executable termination-checker-exe
   build-depends:
       Cabal
     , HUnit
+    , HUnit-Plus
     , base >=4.7 && <5
     , containers
     , mtl
@@ -78,6 +80,7 @@ test-suite termination-checker-test
   build-depends:
       Cabal
     , HUnit
+    , HUnit-Plus
     , base >=4.7 && <5
     , containers
     , mtl
