@@ -6,15 +6,6 @@ import qualified Test.HUnit               as T
 import           Test.HUnitPlus.Base      as TP
 import           Types
 
-testType :: Expr -> T.Test
-testType e =
-  T.TestCase
-    (do result <- evalStateT (checkType0 e) emptySig
-        T.assertEqual
-          ("checkType0 " <> show e <> " should return Right ()")
-          result
-          (Right ()))
-
 testTarget :: Name -> Telescope -> Expr -> T.Test
 testTarget name tel e =
   T.TestCase
@@ -25,11 +16,11 @@ testTarget name tel e =
           result
           ())
 
-testTargetFail :: Name -> Telescope -> Expr -> T.Test
-testTargetFail name tel e =
+testTargetErr :: Name -> Telescope -> Expr -> T.Test
+testTargetErr name tel e =
   T.TestCase
     (TP.assertThrowsExact
-       (ErrorCall "anything")
+       (ErrorCall "")
        (evalStateT (checkTarget name tel e) emptySig))
 
 testDataType :: Int -> Env -> Env -> Int -> Expr -> T.Test
@@ -43,11 +34,17 @@ testDataType k rho gamma p e =
           result
           ())
 
+testDataTypeErr :: Int -> Env -> Env -> Int -> Expr -> T.Test
+testDataTypeErr k rho gamma p e =
+  T.TestCase
+    (TP.assertThrowsExact
+       (ErrorCall "")
+       (evalStateT (checkDataType k rho gamma p e) emptySig))
+
 testTargetList =
   T.TestList
-    [ T.TestLabel "testTypeStar" (testType Star)
     -- a definition matches its name
-    , T.TestLabel "testTargetDefn" (testTarget "n" [] (Def "n"))
+    [ T.TestLabel "testTargetDefn" (testTarget "n" [] (Def "n"))
     , T.TestLabel "testTargetApp" (testTarget "name" [] (App (Def "name") []))
     -- application of a var has a name that matches what's in the telescope
     , T.TestLabel
@@ -55,15 +52,18 @@ testTargetList =
         (testTarget "name" [("var", Star)] (App (Def "name") [Var "var"]))
     -- names that don't match should raise an error
     , T.TestLabel
-        "testTargetFailDef"
-        (testTargetFail "na" [] (App (Def "name") []))
+        "testTargetErrDef"
+        (testTargetErr "na" [] (App (Def "name") []))
     , T.TestLabel
-        "testTargetFailApp"
-        (testTargetFail "name" [("var", Star)] (App (Def "name") [Var "notVar"]))
+        "testTargetErrApp"
+        (testTargetErr "name" [("var", Star)] (App (Def "name") [Var "notVar"]))
     ]
 
 testDataTypeList =
-  T.TestList [T.TestLabel "testDataTypeStar" (testDataType 0 [] [] 0 Star)]
+  T.TestList
+    [ T.TestLabel "testDataTypeStar" (testDataType 0 [] [] 0 Star)
+    , T.TestLabel "testDataTypeConErr" (testDataTypeErr 0 [] [] 0 (Con "con"))
+    ]
 
 main = do
   putStrLn ""

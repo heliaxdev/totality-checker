@@ -36,14 +36,14 @@ typeToTele t = ttt t []
 
 -- check data type
 -- check that params are types
--- check that arguments are stypes
+-- check that arguments are Star types
 -- check that target is set
 checkDataType :: Int -> Env -> Env -> Int -> Expr -> TypeCheck ()
 checkDataType k rho gamma p (Pi x t1 t2) = do
   _ <-
     if k < p
-      then checkType k rho gamma t1
-      else checkSType k rho gamma t1
+      then checkType k rho gamma t1 -- params are valid types
+      else checkSType k rho gamma t1 -- arguments are Star types
   v_t1 <- eval rho t1
   checkDataType (k + 1) (updateEnv rho x (VGen k)) (updateEnv gamma x v_t1) p t2
 checkDataType _k _rho _gamma _p Star = return ()
