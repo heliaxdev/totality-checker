@@ -96,24 +96,23 @@ matchList env (p:pl) (v:vl) = do
     Nothing   -> return Nothing
 matchList _ _ _ = return Nothing
 
--- check that a does not occur in tv
--- a may be a "atomic value" i.e not pi , lam , app , or succ
-nocc :: Int -> Value -> Value -> TypeCheck Bool
-nocc k a tv =
-  case tv of
-    VPi x av env b -> do
-      no <- nocc k a av
-      if no
-        then do
-          bv <- eval (updateEnv env x (VGen k)) b
-          nocc (k + 1) a bv
-        else return False
-    VLam x env b -> do
+-- non-occurrence check of atomic value a:
+-- check that a (2nd input) does not occur in tv (3rd input)
+-- a may be a "atomic value" i.e not pi, lam, app, or succ
+nonOccur :: Int -> Value -> Value -> TypeCheck Bool
+nonOccur k a (VPi x av env b) = do
+  no <- nonOccur k a av
+  if no
+    then do
       bv <- eval (updateEnv env x (VGen k)) b
-      nocc (k + 1) a bv
-    VSucc v -> nocc k a v
-    VApp v1 vl -> do
-      n <- nocc k a v1
-      nl <- mapM (nocc k a) vl
-      return $ n && and nl
-    _ -> return $ a /= tv
+      nonOccur (k + 1) a bv
+    else return False
+nonOccur k a (VLam x env b) = do
+  bv <- eval (updateEnv env x (VGen k)) b
+  nonOccur (k + 1) a bv
+nonOccur k a (VSucc v) = nonOccur k a v
+nonOccur k a (VApp v1 vl) = do
+  n <- nonOccur k a v1
+  nl <- mapM (nonOccur k a) vl
+  return $ n && and nl
+nonOccur k a tv = return $ a /= tv

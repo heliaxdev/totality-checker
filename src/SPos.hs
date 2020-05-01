@@ -44,7 +44,7 @@ posArgs vl pl =
 -- a may be a "atomic value" ie not pi, lam, app, or succ
 spos :: Int -> Value -> Value -> TypeCheck Bool
 spos k a (VPi x av env b) = do
-  no <- nocc k a av
+  no <- nonOccur k a av
   if no
     then do
       bv <- eval (updateEnv env x (VGen k)) b
@@ -61,18 +61,18 @@ spos k a (VApp (VDef m) vl) = do
       let (pparams, nparams) = posArgs vl pos
       let rest = drop p vl
       sl <- mapM (spos k a) pparams
-      nl <- mapM (nocc k a) (nparams <> rest)
+      nl <- mapM (nonOccur k a) (nparams <> rest)
       return $ and sl && and nl
     _ -> do
-      nl <- mapM (nocc k a) vl
+      nl <- mapM (nonOccur k a) vl
       return $ and nl
 spos k a (VApp v' vl) =
   if v' == a
     then do
-      nl <- mapM (nocc k a) vl
+      nl <- mapM (nonOccur k a) vl
       return $ and nl
     else do
-      n <- nocc k a v'
-      nl <- mapM (nocc k a) vl
+      n <- nonOccur k a v'
+      nl <- mapM (nonOccur k a) vl
       return $ n && and nl
 spos _k _a _ = return True
