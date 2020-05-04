@@ -18,63 +18,47 @@ checkExpr k rho gamma (Pi n t1 t2) VStar = do
 checkExpr k rho gamma (Succ e2) VSize = checkExpr k rho gamma e2 VSize
 checkExpr k rho gamma e v = do
   ev <- inferExpr k rho gamma e
-  case ev of
-    Right inferredType ->
-      if inferredType == v
-        then return $ Right ()
-        else return $
-             Left
-               ("Type mismatched. \n" <> show e <> " \n (binder number " <>
-                show k <>
-                ") is of type \n" <>
-                show ev <>
-                "\n but the expected type is " <>
-                show v)
-    Left err -> return $ Left $ "Error while inferring " <> show e <> err
+  if ev == v
+    then return $ Right ()
+    else return $
+         Left
+           ("Type mismatched. \n" <> show e <> " \n (binder number " <> show k <>
+            ") is of type \n" <>
+            show ev <>
+            "\n but the expected type is " <>
+            show v)
 
 -- checks that input Expr is correct and infers its type value v
-inferExpr :: Int -> Env -> Env -> Expr -> TypeCheck (Either String Value)
-inferExpr _k _rho gamma (Var x) = return $ Right $ lookupEnv gamma x
+inferExpr :: Int -> Env -> Env -> Expr -> TypeCheck Value
+inferExpr _k _rho gamma (Var x) = return $ lookupEnv gamma x
 inferExpr k rho gamma (App e1 e2) =
   case e2 of
     [] ->
-      return $
-      Left $
-      "InferExpr: App is applied to an empty list of expressions: " <> show e1 <>
+      error $
+      "inferExpr : App is applied to an empty list of expressions: " <> show e1 <>
       " is applied to " <>
       show e2 <>
       ", which is empty."
     [e] -> do
       v <- inferExpr k rho gamma e1
       case v of
-        Right (VPi x av env b) -> do
-          _ <- checkExpr k rho gamma e av
+        VPi x av env b -> do
+          checkExpr k rho gamma e av
           v2 <- eval rho e
-          updateV2 <- eval (updateEnv env x v2) b
-          return $ Right updateV2
-        Right _notFn ->
-          return $
-          Left $
-          "InferExpr: expected Pi with expression : " <> show e1 <> "," <>
-          show v
-        Left err ->
-          return $
-          Left $
-          "InferExpr: " <> show e1 <> err <>
-          "InferExpr: expected Pi with expression : " <>
-          show e1 <>
-          "," <>
+          eval (updateEnv env x v2) b
+        _ ->
+          error $
+          "inferExpr : expected Pi with expression : " <> show e1 <> "," <>
           show v
     (hd:tl) -> inferExpr k rho gamma (App (App e1 [hd]) tl)
 inferExpr _k _rho _gamma (Def n) = do
   sig <- get
   case lookupSig n sig of
-    (DataSig _ _ _ tv) -> return $ Right tv
-    (FunSig tv _ _) -> return $ Right tv
+    (DataSig _ _ _ tv) -> return tv
+    (FunSig tv _ _) -> return tv
     (ConSig tv) ->
-      return $
-      Left $
-      "InferExpr: expecting type from data or function signature " <>
+      error $
+      "inferExpr: expecting type from data or function signature " <>
       show (Def n) <>
       " but found " <>
       show tv <>
@@ -82,26 +66,24 @@ inferExpr _k _rho _gamma (Def n) = do
 inferExpr _k _rho _gamma (Con n) = do
   sig <- get
   case lookupSig n sig of
-    (ConSig tv) -> return $ Right tv
+    (ConSig tv) -> return tv
     (DataSig _ _ _ tv) ->
-      return $
-      Left $
-      "InferExpr: expecting type from data or function signature " <>
+      error $
+      "inferExpr: expecting type from data or function signature " <>
       show (Con n) <>
       " but found " <>
       show tv <>
       " from data type signature. "
     (FunSig tv _ _) ->
-      return $
-      Left $
-      "InferExpr: expecting type from data or function signature " <>
+      error $
+      "inferExpr: expecting type from data or function signature " <>
       show (Con n) <>
       " but found " <>
       show tv <>
       " from function signature. "
 -- Pi, Lam, Size types, Star cannot be inferred
 inferExpr _k _rho _gamma e =
-  return $ Left $ "InferExpr: cannot infer the type of " <> show e
+  error $ "inferExpr: cannot infer the type of " <> show e
 
 -- checks that input Expr denotes a valid type
 checkType :: Int -> Env -> Env -> Expr -> TypeCheck (Either String ())
