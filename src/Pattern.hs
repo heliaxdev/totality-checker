@@ -69,7 +69,7 @@ checkPattern k flex ins rho gamma (VPi x av env b) (DotP e) = do
   return (k + 1, (k, (e, av)) : flex, ins, rho, gamma, vb)
 checkPattern _k _flex _ins _rho _gamma v _ = error $ "checkpattern: " <> show v
 
--- match v1 against v2 by unification , yielding a substition
+-- match v1 against v2 by unification, yielding a substition
 inst :: Int -> [Int] -> Value -> Value -> TypeCheck Substitution
 inst m flex v1 v2 =
   case (v1, v2) of
@@ -104,7 +104,15 @@ instList m flex (v1:vl1) (v2:vl2) = do
   map' <- instList m flex vl1' vl2'
   compSubst map map'
 
-compSubst = undefined
+-- composition of substitutions:
+-- given sig1 and sig2 are substitutions, using `sig1 sig2{v} = sig2 {sig1{v}}`
+-- merge two substitutions into one such that
+-- compSubst ((k1,v1)...(kn,vn)) sig2 = ((k1,sig2{v1})...(kn,sig2{vn}))
+compSubst subst1 subst2 = do
+  let (dom1, tg1) = unzip subst1
+  tg1' <- mapM (substVal subst2) tg1
+  let subst1' = zip dom1 tg1'
+  return $ subst1' <> subst2
 
 substVal = undefined
 
