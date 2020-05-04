@@ -54,15 +54,21 @@ checkDataType _k _rho _gamma _p e =
 -- check that arguments are stypes
 -- check that result is a star
 --  ( params were already checked by checkDataType )
-checkConType :: Int -> Env -> Env -> Int -> Expr -> TypeCheck (Either String ())
-checkConType k rho gamma p (Pi x t1 t2) = do
-  _ <-
-    if k < p
-      then return $ Right ()
-      else checkSType k rho gamma t1
-  v_t1 <- eval rho t1
-  checkConType (k + 1) (updateEnv rho x (VGen k)) (updateEnv gamma x v_t1) p t2
-checkConType k rho gamma _p e = checkExpr k rho gamma e VStar
+checkConType :: Int -> Env -> Env -> Int -> Expr -> TypeCheck ()
+checkConType k rho gamma p e =
+  case e of
+    Pi x t1 t2 -> do
+      if k < p
+        then return ()
+        else checkSType k rho gamma t1
+      v_t1 <- eval rho t1
+      checkConType
+        (k + 1)
+        (updateEnv rho x (VGen k))
+        (updateEnv gamma x v_t1)
+        p
+        t2
+    _ -> checkExpr k rho gamma e VStar
 
 -- check that the data type and the parameter arguments
 -- are written down like declared in telescope
