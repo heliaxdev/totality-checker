@@ -43,8 +43,7 @@ checkClause i e (Clause pl rhs) = do
   -- check inaccessible
   mapM_ (checkDot k rho gamma ins) flex
   -- check the right hand side (e)
-  -- TODO revert to Typecheck ()
-  -- checkExpr k rho gamma rhs vt
+  checkExpr k rho gamma rhs vt
 
 enableSig :: (TypeSig, [Clause]) -> TypeCheck ()
 enableSig (TypeSig n _, _) = do
