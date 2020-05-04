@@ -4,8 +4,11 @@ import           Control.Monad.State
 import           Evaluator
 import           Types
 
--- to check data type declarations, one has to check
--- strict positivity of the constructors.
+-- to check data type declarations, one has to check that
+-- constructors are strictly positive, which requires:
+-- (1) the non-occurrence of an atomic value (nonOccur)
+-- (2) the strict positive occurrence of an atomic value (spos)
+-- spos embodies nonOccur.
 --
 -- check that recursive data argument n and
 -- the spos declared parameter variables are only used strictly positively
@@ -76,3 +79,24 @@ spos k a (VApp v' vl) =
       nl <- mapM (nonOccur k a) vl
       return $ n && and nl
 spos _k _a _ = return True
+
+-- non-occurrence check of atomic value a:
+-- check that a (2nd input) does not occur in tv (3rd input)
+-- a may be a "atomic value" i.e not pi, lam, app, or succ
+nonOccur :: Int -> Value -> Value -> TypeCheck Bool
+nonOccur k a (VPi x av env b) = do
+  no <- nonOccur k a av
+  if no
+    then do
+      bv <- eval (updateEnv env x (VGen k)) b
+      nonOccur (k + 1) a bv
+    else return False
+nonOccur k a (VLam x env b) = do
+  bv <- eval (updateEnv env x (VGen k)) b
+  nonOccur (k + 1) a bv
+nonOccur k a (VSucc v) = nonOccur k a v
+nonOccur k a (VApp v1 vl) = do
+  n <- nonOccur k a v1
+  nl <- mapM (nonOccur k a) vl
+  return $ n && and nl
+nonOccur k a tv = return $ a /= tv

@@ -2,6 +2,7 @@ module Pattern where
 
 import           Control.Monad.State (get)
 import           Evaluator
+import           SPos                (nonOccur)
 import           Types
 
 -- a substitution is a list of a partial mapping of generic values to values.
