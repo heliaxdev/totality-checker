@@ -85,18 +85,18 @@ spos _k _a _ = return True
 -- a may be a "atomic value" i.e not pi, lam, app, or succ
 nonOccur :: Int -> Value -> Value -> TypeCheck Bool
 nonOccur k a (VPi x av env b) = do
-  no <- nonOccur k a av
-  if no
+  aNotInav <- nonOccur k a av
+  if aNotInav
     then do
-      bv <- eval (updateEnv env x (VGen k)) b
-      nonOccur (k + 1) a bv
+      bv <- eval (updateEnv env x (VGen k)) b -- put x in env and eval
+      nonOccur (k + 1) a bv -- check the next k
     else return False
 nonOccur k a (VLam x env b) = do
   bv <- eval (updateEnv env x (VGen k)) b
   nonOccur (k + 1) a bv
+nonOccur k a (VApp var vs) = do
+  aNotInVar <- nonOccur k a var
+  listNotInvs <- mapM (nonOccur k a) vs
+  return $ aNotInVar && and listNotInvs
 nonOccur k a (VSucc v) = nonOccur k a v
-nonOccur k a (VApp v1 vl) = do
-  n <- nonOccur k a v1
-  nl <- mapM (nonOccur k a) vl
-  return $ n && and nl
 nonOccur k a tv = return $ a /= tv

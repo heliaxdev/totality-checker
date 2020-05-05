@@ -23,12 +23,12 @@ checkPatterns k flex ins rho gamma v (p:pl) = do
   checkPatterns k' flex' ins' rho' gamma' v' pl
 
 {-
-checkPattern k flex subst rho gamma v p = (k', flex', subst', rho', gamma', v')
+checkPattern k flex sub rho gamma v p = (k', flex', sub', rho', gamma', v')
 
 Input :
   k     : next free generic value
   flex  : list of pairs (flexible variable, its dot(inaccessible) pattern + supposed type)
-  subst : list of pairs (flexible variable, its valuation)
+  sub : list of pairs (flexible variable, its valuation)
   rho   : binding of variables to values
   gamma : binding of variables to their types
   v     : type of the expression \ p -> t
@@ -57,10 +57,10 @@ checkPattern k flex ins rho gamma (VPi x av env b) (ConP n pl) = do
   (k', flex', ins', rho', gamma', vc') <-
     checkPatterns k flex ins rho gamma vc pl
   let flexgen = map fst flex'
-  subst <- inst k' flexgen vc' av
+  sub <- inst k' flexgen vc' av
   let pv = patternToVal k (ConP n pl)
   vb <- eval (updateEnv env x pv) b
-  ins'' <- compSubst ins' subst
+  ins'' <- compSubst ins' sub
   vb <- subsValue ins'' vb
   gamma' <- substEnv ins'' gamma'
   return (k', flex', ins'', rho', gamma', vb)
@@ -74,10 +74,11 @@ inst :: Int -> [Int] -> Value -> Value -> TypeCheck Substitution
 inst m flex v1 v2 =
   case (v1, v2) of
     (VGen k, _)
-      | k `elem` flex -> do
+      | k `elem` flex -- if k is a flexible generic value (dot pattern)
+       -> do
         noc <- nonOccur m v1 v2 -- check for non-occurence
-        if noc
-          then return [(k, v2)]
+        if noc -- if v1 is not in v2
+          then return [(k, v2)] -- instantiate k to v2
           else error "inst: occurs check failed"
     (_, VGen k)
       | k `elem` flex -> do
@@ -105,14 +106,14 @@ instList m flex (v1:vl1) (v2:vl2) = do
   compSubst map map'
 
 -- composition of substitutions:
--- given sig1 and sig2 are substitutions, using `sig1 sig2{v} = sig2 {sig1{v}}`
+-- given substitutions sub1 and sub2, using `sub1 sub2{v} = sub2 {sub1{v}}`
 -- merge two substitutions into one such that
--- compSubst ((k1,v1)...(kn,vn)) sig2 = ((k1,sig2{v1})...(kn,sig2{vn}))
-compSubst subst1 subst2 = do
-  let (dom1, tg1) = unzip subst1
-  tg1' <- mapM (substVal subst2) tg1
-  let subst1' = zip dom1 tg1'
-  return $ subst1' <> subst2
+-- compSubst ((k1,v1)...(kn,vn)) sub2 = ((k1,sub2{v1})...(kn,sub2{vn}))
+compSubst sub1 sub2 = do
+  let (dom1, tg1) = unzip sub1
+  tg1' <- mapM (substVal sub2) tg1
+  let sub1' = zip dom1 tg1'
+  return $ sub1' <> sub2
 
 substVal = undefined
 
@@ -147,4 +148,4 @@ ps2vs k (p:pl) =
 
 checkDot ::
      Int -> Env -> Env -> Substitution -> (Int, (Expr, Value)) -> TypeCheck ()
-checkDot k rho gamma subst (i, (e, tv)) = undefined
+checkDot k rho gamma sub (i, (e, tv)) = undefined
