@@ -92,9 +92,7 @@ inst m flex v1 v2 =
       | c1 == c2 -> instList m flex vl1 vl2
     (VSucc v1', VSucc v2') -> inst m flex v1' v2'
     (VSucc v, VInfty) -> inst m flex v VInfty
-    -- _ -> do --TODO
-    --   eqVal m v1 v2
-    --   return []
+    _ -> return []
 
 instList :: Int -> [Int] -> [Value] -> [Value] -> TypeCheck Substitution
 instList m flex [] [] = return []

@@ -3,7 +3,10 @@ module Evaluator where
 import           Control.Monad.State
 import           Types
 
-eval :: Env -> Expr -> TypeCheck Value -- Evaluation
+-- Evaluation of a closure (expression, env) to a value
+-- the env provides bindings for the free variables occurring in e
+-- values are partially evaluated expressions that may contain closures
+eval :: Env -> Expr -> TypeCheck Value
 eval env (App e es) = do
   v <- eval env e
   vs <- mapM (eval env) es
@@ -12,10 +15,14 @@ eval _env Star = return VStar
 eval _env (Con name) = return $ VCon name
 eval _env (Def name) = return $ VDef name
 eval env (Var name) = return $ lookupEnv env name
-eval env (Lam x e) = return $ VLam x env e
-eval env (Pi name ty e) = do
+-- for Lam and Pi:
+-- the returned closures (env, e) do not have a binding for x
+-- the missing binding might be a concrete value during beta reduction
+-- or a fresh generic value k.
+eval env (Lam x e) = return $ VLam x env e -- env e is a closure
+eval env (Pi x ty e) = do
   ety <- eval env ty
-  return $ VPi name ety env e
+  return $ VPi x ety env e -- env e is a closure
 -- evaluation of size type
 eval _env Size = return VSize
 eval env (Succ s) = do
@@ -32,6 +39,7 @@ lookupEnv ((x, v):xs) n
   | x == n = v
   | otherwise = lookupEnv xs n
 
+-- beta reduction
 app :: Value -> [Value] -> TypeCheck Value
 app u [] = return u
 app (VApp u2 c2) c = app u2 (c2 <> c)
@@ -40,7 +48,7 @@ app (VLam x env e) (v:vl) = do
   app v' vl
 app (VDef n) c = appDef n c
 app u c = return $ VApp u c
-
+-- inductive function application
 appDef :: Name -> [Value] -> TypeCheck Value
 appDef n vl = do
   sig <- get
