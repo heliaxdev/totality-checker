@@ -21,7 +21,7 @@ checkExpr k rho gamma (Pi n t1 t2) VStar = do
 checkExpr k rho gamma (Succ e2) VSize = checkExpr k rho gamma e2 VSize
 checkExpr k rho gamma e v = do
   ev <- inferExpr k rho gamma e
-  eqVal 0 ev v
+  eqVal 0 ev v -- TODO: subtyping? (leqVal)
 
 -- checks that input Expr is correct and infers its type value v
 inferExpr :: Int -> Env -> Env -> Expr -> TypeCheck Value
