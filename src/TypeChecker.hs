@@ -21,4 +21,4 @@ typeCheckDeclaration (DataDecl n sz pos tel t cs) = do
   v <- eval [] dt
   put $ addSig sig n (DataSig params pos sz v)
   mapM_ (typeCheckConstructor n sz pos tel) cs
-typeCheckDeclaration (FunDecl funs) = undefined
+typeCheckDeclaration (FunDecl funs) = typeCheckFuns funs

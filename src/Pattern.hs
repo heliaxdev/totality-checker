@@ -23,31 +23,18 @@ checkPatterns k flex ins rho gamma v (p:pl) = do
   (k', flex', ins', rho', gamma', v') <- checkPattern k flex ins rho gamma v p
   checkPatterns k' flex' ins' rho' gamma' v' pl
 
-{- checkPattern only checks for accessible patterns.
-dot patterns will be represented by fresh flexible generic values,
-which will be instantiated to concrete values when checking constructor patterns.
-
-Input :
-  k     : next free generic value
-  flex  : list of pairs (flexible variable, its dot(inaccessible) pattern + supposed type)
-  sub : list of pairs (flexible variable, its valuation)
-  rho   : binding of variables to values
-  gamma : binding of variables to their types
-  v     : type of the expression \ p -> t
-  p     : the pattern to check
-          (variable/constructor/inaccessible pattern)
-
-Output
-  updated versions of the inputs (after a pattern is checked)
--}
+-- checkPattern only checks for accessible patterns.
+-- dot patterns will be represented by fresh flexible generic values,
+-- which will be instantiated to concrete values when checking constructor patterns.
 checkPattern ::
-     Int
-  -> [(Int, (Expr, Value))]
-  -> Substitution
-  -> Env
-  -> Env
-  -> Value
-  -> Pattern
+     Int -- next free generic value
+  -> [(Int, (Expr, Value))] -- (flex variable, (its dot pattern, type))
+  -> Substitution -- [(Int, Value)], (flex variable, its valuation)
+  -> Env -- binding of variables to values
+  -> Env -- binding of variables to their types
+  -> Value -- type of the expression
+  -> Pattern -- the pattern to check (variable/constructor/dot pattern)
+  -- updated versions of the 6 inputs after a pattern is checked
   -> TypeCheck (Int, [(Int, (Expr, Value))], Substitution, Env, Env, Value)
 checkPattern k flex ins rho gamma (VPi x av env b) (VarP y) = do
   let gk = VGen k -- variable patterns are converted to generic values
@@ -59,11 +46,12 @@ checkPattern k flex ins rho gamma (VPi x av env b) (ConP n pl) = do
   (k', flex', ins', rho', gamma', vc') <-
     checkPatterns k flex ins rho gamma vc pl
   let flexgen = map fst flex'
-  sub <- inst k' flexgen vc' av
+  sub <- inst k' flexgen vc' av -- instantiate flex variables
   let pv = patternToVal k (ConP n pl)
   vb <- eval (updateEnv env x pv) b
+  -- composition of substitutions from checkPatterns and instantiated flex var
   ins'' <- compSubst ins' sub
-  vb <- subsValue ins'' vb
+  vb <- substVal ins'' vb -- substitute generic variable in value
   gamma' <- substEnv ins'' gamma'
   return (k', flex', ins'', rho', gamma', vb)
 checkPattern k flex ins rho gamma (VPi x av env b) (DotP e) = do
@@ -117,11 +105,35 @@ compSubst sub1 sub2 = do
   let sub1' = zip dom1 tg1'
   return $ sub1' <> sub2
 
-substVal = undefined
+-- substitute generic variable in value
+substVal :: Substitution -> Value -> TypeCheck Value
+substVal sub (VGen k) =
+  case lookup k sub of
+    Nothing -> return $ VGen k
+    Just v' -> return v'
+substVal sub (VApp v1 vl) = do
+  v1' <- substVal sub v1
+  vl' <- mapM (substVal sub) vl
+  return $ VApp v1' vl'
+substVal sub (VSucc v1) = do
+  v1' <- substVal sub v1
+  return $ sinfty v1'
+substVal sub (VPi x av env b) = do
+  av' <- substVal sub av
+  env' <- substEnv sub env
+  return $ VPi x av' env' b
+substVal sub (VLam x env b) = do
+  env' <- substEnv sub env
+  return $ VLam x env' b
+substVal sub v = return v
 
-subsValue = undefined
-
-substEnv = undefined
+-- substitute in environment
+substEnv :: Substitution -> Env -> TypeCheck Env
+substEnv sub [] = return []
+substEnv sub ((x, v):env) = do
+  v' <- substVal sub v
+  env' <- substEnv sub env
+  return $ (x, v') : env'
 
 patternToVal :: Int -> Pattern -> Value
 patternToVal k p = fst (p2v k p)
@@ -157,7 +169,12 @@ checkDot k rho gamma subst (i, (e, tv)) =
         of
     Nothing ->
       error $
-      "checkDot: not instantiated, (" <> show e <> ", " <> show tv <> "). "
+      "checkDot: cannot find the substitution for flex value (" <> show i <>
+      ", (" <>
+      show e <>
+      ", " <>
+      show tv <>
+      ")). "
     Just v -> do
       tv <- substVal subst tv
       checkExpr k rho gamma e tv
