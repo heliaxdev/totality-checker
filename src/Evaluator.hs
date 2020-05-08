@@ -48,6 +48,7 @@ app (VLam x env e) (v:vl) = do
   app v' vl
 app (VDef n) c = appDef n c
 app u c = return $ VApp u c
+
 -- inductive function application
 appDef :: Name -> [Value] -> TypeCheck Value
 appDef n vl = do
@@ -62,28 +63,29 @@ appDef n vl = do
 
 eqVal :: Int -> Value -> Value -> TypeCheck ()
 eqVal k (VSucc v1) (VSucc v2) = eqVal k v1 v2
-eqVal k (VApp v1 vl1) (VApp v2 vl2) =
-  do eqVal k v1 v2
-     eqVals k vl1 vl2
-eqVal k (VPi x1 av1 env1 b1) (VPi x2 av2 env2 b2) =
-  do eqVal k av1 av2
-     v1 <- eval (updateEnv env1 x1 (VGen k)) b1
-     v2 <- eval (updateEnv env2 x2 (VGen k)) b2
-     eqVal (k+1) v1 v2
-eqVal k (VLam x1 env1 b1) (VLam x2 env2 b2) =
-  do v1 <- eval (updateEnv env1 x1 (VGen k)) b1
-     v2 <- eval (updateEnv env2 x2 (VGen k)) b2
-     eqVal (k+1) v1 v2
-eqVal k v1 v2 =
-  if v1 == v2 then return ()
-  else error $ "eqVal: " ++ show v1 ++ " does not equal to " ++ show v2
+eqVal k (VApp v1 vl1) (VApp v2 vl2) = do
+  eqVal k v1 v2
+  eqVals k vl1 vl2
+eqVal k (VPi x1 av1 env1 b1) (VPi x2 av2 env2 b2) = do
+  eqVal k av1 av2
+  v1 <- eval (updateEnv env1 x1 (VGen k)) b1
+  v2 <- eval (updateEnv env2 x2 (VGen k)) b2
+  eqVal (k + 1) v1 v2
+eqVal k (VLam x1 env1 b1) (VLam x2 env2 b2) = do
+  v1 <- eval (updateEnv env1 x1 (VGen k)) b1
+  v2 <- eval (updateEnv env2 x2 (VGen k)) b2
+  eqVal (k + 1) v1 v2
+eqVal _k v1 v2 =
+  if v1 == v2
+    then return ()
+    else error $ "eqVal: " ++ show v1 ++ " does not equal to " ++ show v2
 
 eqVals :: Int -> [Value] -> [Value] -> TypeCheck ()
-eqVals k [] [] = return ()
-eqVals k (v1:vs1) (v2:vs2) = do eqVal k v1 v2
-                                eqVals k vs1 vs2
-eqVals k vl1 vl2 = error "eqVals: mismatch number of arguments"
-
+eqVals _k [] [] = return ()
+eqVals k (v1:vs1) (v2:vs2) = do
+  eqVal k v1 v2
+  eqVals k vs1 vs2
+eqVals _k _vl1 _vl2 = error "eqVals: mismatch number of arguments"
 
 -- pattern matching
 matchClauses :: [Clause] -> [Value] -> TypeCheck (Maybe Value)

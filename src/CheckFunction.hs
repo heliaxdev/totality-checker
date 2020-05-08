@@ -1,7 +1,7 @@
 module CheckFunction where
 
-import           CheckExpr           (checkExpr, checkType0)
-import           Control.Monad       (unless, zipWithM_)
+import           CheckExpr           (checkExpr)
+import           Control.Monad       (zipWithM_)
 import           Control.Monad.State (get, put)
 import           Evaluator           (eval)
 import           Pattern
@@ -27,7 +27,7 @@ checkFun :: Expr -> [Clause] -> TypeCheck ()
 checkFun = checkFun' 1
 
 checkFun' :: Int -> Expr -> [Clause] -> TypeCheck ()
-checkFun' i e [] = return ()
+checkFun' _i _e [] = return ()
 checkFun' i e (c:cl) = do
   checkClause i e c
   checkFun' (i + 1) e cl
@@ -36,7 +36,7 @@ checkFun' i e (c:cl) = do
 -- first we check the patterns (see module Pattern)
 -- and then the right hand side (e).
 checkClause :: Int -> Expr -> Clause -> TypeCheck ()
-checkClause i e (Clause pl rhs) = do
+checkClause _i e (Clause pl rhs) = do
   v <- eval [] e
   -- check accessible patterns
   (k, flex, ins, rho, gamma, vt) <- checkPatterns 0 [] [] [] [] v pl

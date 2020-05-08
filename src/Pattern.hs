@@ -51,9 +51,9 @@ checkPattern k flex ins rho gamma (VPi x av env b) (ConP n pl) = do
   vb <- eval (updateEnv env x pv) b
   -- composition of substitutions from checkPatterns and instantiated flex var
   ins'' <- compSubst ins' sub
-  vb <- substVal ins'' vb -- substitute generic variable in value
-  gamma' <- substEnv ins'' gamma'
-  return (k', flex', ins'', rho', gamma', vb)
+  vb' <- substVal ins'' vb -- substitute generic variable in value
+  gamma'' <- substEnv ins'' gamma'
+  return (k', flex', ins'', rho', gamma'', vb')
 checkPattern k flex ins rho gamma (VPi x av env b) (DotP e) = do
   vb <- eval (updateEnv env x (VGen k)) b
   return (k + 1, (k, (e, av)) : flex, ins, rho, gamma, vb)
@@ -87,18 +87,23 @@ inst m flex v1 v2 =
       return []
 
 instList :: Int -> [Int] -> [Value] -> [Value] -> TypeCheck Substitution
-instList m flex [] [] = return []
+instList _m _flex [] [] = return []
 instList m flex (v1:vl1) (v2:vl2) = do
-  map <- inst m flex v1 v2
-  vl1' <- mapM (substVal map) vl1
-  vl2' <- mapM (substVal map) vl2
-  map' <- instList m flex vl1' vl2'
-  compSubst map map'
+  sub <- inst m flex v1 v2
+  vl1' <- mapM (substVal sub) vl1
+  vl2' <- mapM (substVal sub) vl2
+  sub' <- instList m flex vl1' vl2'
+  compSubst sub sub'
+instList _ _ [] (_:_) =
+  error "instList: the second input value list is longer than the first one. "
+instList _ _ (_:_) [] =
+  error "instList: the first input value list is longer than the second one. "
 
 -- composition of substitutions:
 -- given substitutions sub1 and sub2, using `sub1 sub2{v} = sub2 {sub1{v}}`
 -- merge two substitutions into one such that
 -- compSubst ((k1,v1)...(kn,vn)) sub2 = ((k1,sub2{v1})...(kn,sub2{vn}))
+compSubst :: Substitution -> Substitution -> TypeCheck Substitution
 compSubst sub1 sub2 = do
   let (dom1, tg1) = unzip sub1
   tg1' <- mapM (substVal sub2) tg1
@@ -125,11 +130,11 @@ substVal sub (VPi x av env b) = do
 substVal sub (VLam x env b) = do
   env' <- substEnv sub env
   return $ VLam x env' b
-substVal sub v = return v
+substVal _sub v = return v
 
 -- substitute in environment
 substEnv :: Substitution -> Env -> TypeCheck Env
-substEnv sub [] = return []
+substEnv _sub [] = return []
 substEnv sub ((x, v):env) = do
   v' <- substVal sub v
   env' <- substEnv sub env
@@ -176,7 +181,7 @@ checkDot k rho gamma subst (i, (e, tv)) =
       show tv <>
       ")). "
     Just v -> do
-      tv <- substVal subst tv
-      checkExpr k rho gamma e tv
+      tv' <- substVal subst tv
+      checkExpr k rho gamma e tv'
       v' <- eval rho e
       eqVal k v v'

@@ -99,4 +99,4 @@ nonOccur k a (VApp var vs) = do
   listNotInvs <- mapM (nonOccur k a) vs
   return $ aNotInVar && and listNotInvs
 nonOccur k a (VSucc v) = nonOccur k a v
-nonOccur k a tv = return $ a /= tv
+nonOccur _k a tv = return $ a /= tv
