@@ -40,7 +40,7 @@ checkClause i e (Clause pl rhs) = do
   v <- eval [] e
   -- check accessible patterns
   (k, flex, ins, rho, gamma, vt) <- checkPatterns 0 [] [] [] [] v pl
-  -- check inaccessible
+  -- check inaccessible patterns
   mapM_ (checkDot k rho gamma ins) flex
   -- check the right hand side (e)
   checkExpr k rho gamma rhs vt

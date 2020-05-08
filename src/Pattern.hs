@@ -1,5 +1,6 @@
 module Pattern where
 
+import           CheckExpr           (checkExpr)
 import           Control.Monad.State (get)
 import           Evaluator
 import           SPos                (nonOccur)
@@ -22,8 +23,9 @@ checkPatterns k flex ins rho gamma v (p:pl) = do
   (k', flex', ins', rho', gamma', v') <- checkPattern k flex ins rho gamma v p
   checkPatterns k' flex' ins' rho' gamma' v' pl
 
-{-
-checkPattern k flex sub rho gamma v p = (k', flex', sub', rho', gamma', v')
+{- checkPattern only checks for accessible patterns.
+dot patterns will be represented by fresh flexible generic values,
+which will be instantiated to concrete values when checking constructor patterns.
 
 Input :
   k     : next free generic value
@@ -48,7 +50,7 @@ checkPattern ::
   -> Pattern
   -> TypeCheck (Int, [(Int, (Expr, Value))], Substitution, Env, Env, Value)
 checkPattern k flex ins rho gamma (VPi x av env b) (VarP y) = do
-  let gk = VGen k
+  let gk = VGen k -- variable patterns are converted to generic values
   bv <- eval (updateEnv env x gk) b
   return (k + 1, flex, ins, updateEnv rho y gk, updateEnv gamma y av, bv)
 checkPattern k flex ins rho gamma (VPi x av env b) (ConP n pl) = do
@@ -93,8 +95,8 @@ inst m flex v1 v2 =
     (VSucc v1', VSucc v2') -> inst m flex v1' v2'
     (VSucc v, VInfty) -> inst m flex v VInfty
     _ -> do
-       eqVal m v1 v2
-       return []
+      eqVal m v1 v2
+      return []
 
 instList :: Int -> [Int] -> [Value] -> [Value] -> TypeCheck Substitution
 instList m flex [] [] = return []
@@ -146,6 +148,18 @@ ps2vs k (p:pl) =
       (vl, k'') = ps2vs k' pl
    in (v : vl, k'')
 
+-- check inaccessible patterns. Check that
+-- the expressions are equal to those instantiated in checkPattern
 checkDot ::
      Int -> Env -> Env -> Substitution -> (Int, (Expr, Value)) -> TypeCheck ()
-checkDot k rho gamma sub (i, (e, tv)) = undefined
+checkDot k rho gamma subst (i, (e, tv)) =
+  case lookup i subst -- lookup the substitution of flex value i
+        of
+    Nothing ->
+      error $
+      "checkDot: not instantiated, (" <> show e <> ", " <> show tv <> "). "
+    Just v -> do
+      tv <- substVal subst tv
+      checkExpr k rho gamma e tv
+      v' <- eval rho e
+      eqVal k v v'

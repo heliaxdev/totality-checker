@@ -73,7 +73,7 @@ type Env = [(Name, Value)]
 type Signature = Map.Map Name SigDef
 
 data SigDef -- A signature is a mapping of constants to its info
-  --function constant to its type, clauses, whether it's type checked
+  -- function constant to its type, clauses, whether it's type checked
   = FunSig Value [Clause] Bool
   | ConSig Value -- constructor constant to its type
   -- data type constant to # parameters, positivity of parameters, sized, type
