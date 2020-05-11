@@ -20,15 +20,13 @@ data Expr
 type Name = String
 
 data Value
-  = VStar
-  | VApp Value [Value]
-  | VCon Name
-  | VDef Name
-  | VLam Name Env Expr
-  | VPi Name Value Env Expr
-  -- generic value (k of type nat): the computed value of a variable during
-  -- type-checking.
-  | VGen Int
+  = VStar -- universe of small types
+  | VApp Value [Value] -- application
+  | VCon Name -- constructor
+  | VDef Name -- function/data
+  | VLam Name Env Expr -- Lam x e^ρ
+  | VPi Name Value Env Expr -- Pi x v_A e^ρ where v_A = eval A^ρ
+  | VGen Int -- generic value k
   -- extensions for size type
   | VSize -- size type
   | VInfty -- size limit
@@ -67,7 +65,7 @@ showEnv' :: Env -> String
 showEnv' [] = []
 showEnv' ((n, v):env) = "(" <> show n <> " = " <> show v <> ")" <> showEnv' env
 
--- Environment maps variables to their types.
+-- An environment (ρ) maps variables to their types.
 type Env = [(Name, Value)]
 
 type Signature = Map.Map Name SigDef
@@ -90,6 +88,7 @@ data Sized -- distinguish between sized and not sized data type.
   | NotSized
   deriving (Eq, Show)
 
+-- declarations are either (inductive) data type or function
 data Declaration
   = DataDecl Name Sized [Pos] Telescope Expr [TypeSig]
   | FunDecl [(TypeSig, [Clause])]
