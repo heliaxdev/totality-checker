@@ -20,14 +20,15 @@ data Expr
 type Name = String
 
 data Value
-  = VStar -- universe of small types
-  | VApp Value [Value] -- application
-  | VCon Name -- constructor
-  | VDef Name -- function/data
+  = VApp Value [Value] -- application
   | VLam Name Env Expr -- Lam x e^ρ
   | VPi Name Value Env Expr -- Pi x v_A e^ρ where v_A = eval A^ρ
+  -- atomic values:
   | VGen Int -- generic value k
-  -- extensions for size type
+  | VStar -- universe of small types
+  | VCon Name -- constructor
+  | VDef Name -- function/data
+  -- extensions for size type:
   | VSize -- size type
   | VInfty -- size limit
   | VSucc Value -- size successor

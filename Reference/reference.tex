@@ -1,0 +1,158 @@
+%
+% The first command in your LaTeX source must be the \documentclass command.
+\documentclass[acmsmall]{acmart}
+% clear acmtog.cls footer settings
+\fancyfoot{}
+\setcopyright{none}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+\pagestyle{plain}
+%remove reference format
+\settopmatter{printacmref=false}
+%
+\usepackage{hyperref}
+\begin{document}
+
+\title{Totality Checker for a Dependently Typed Language}
+
+%
+% The "author" command and its associated commands are used to define the authors and their affiliations.
+% Of note is the shared affiliation of the first two authors, and the "authornote" and "authornotemark" commands
+% used to denote shared contribution to the research.
+\author{Marty Stumpf}
+\email{thealmartyblog@gmail.com}
+
+%
+% Keywords. The author(s) should pick words that accurately describe the work being
+% presented. Separate the keywords with commas.
+%\keywords{functional programming, dependent type, type checker, termination checking, totality checking}
+
+%
+%
+% This command processes the author and affiliation and title information and builds
+% the first part of the formatted document.
+\maketitle
+\thispagestyle{empty}
+\section{Introduction}
+
+This is the reference document for the
+\href{https://github.com/thealmarty/termination-checker}{termination-checker}
+repository, which is a totality checker for a dependently typed language
+implemented in Haskell. The totality checker checks for:
+
+\begin{enumerate}
+  \item strict positivity
+  \item pattern matching coverage
+  \item termination
+\end{enumerate}
+
+To support these checks, the type checker has to support data type (hence the
+strict positivity) and function (hence the pattern matching coverage)
+declarations. I first describe the type checker without totality checks in
+section \ref{sec:prelim}. Then I describe the mechanism for checking strict positivity
+in section \ref{sec:spos}. After that, I describe the mechanism for checking
+termination in section \ref{sec:termination}. Finally, I describe the mechanism
+for checking the patterns of a function cover all cases in section
+\ref{sec:pattern}.
+
+\section{Preliminaries (type checking without totality checks)}
+\label{sec:prelim}
+The type checker checks \textit{data type} and \textit{function} declarations. These declarations
+consist of \textit{expressions}.
+
+\subsection{Expressions}
+
+An expression $e$ is one of the following (as in `Types.hs`):
+
+\begin{equation*}
+  \begin{aligned}
+    e &  & = &  & \star           &  & \textrm{universe of small types} \\
+      &  & | &  & x               &  & \textrm{variable}                \\
+      &  & | &  & c               &  & \textrm{constructor name}        \\
+      &  & | &  & D               &  & \textrm{data type name}          \\
+      &  & | &  & f               &  & \textrm{function name}           \\
+      &  & | &  & \lambda x.e     &  & \textrm{abstraction}             \\
+      &  & | &  & (x:A) \to B     &  & \textrm{dependent function type} \\
+      &  & | &  & e e_1 \dots e_n &  & \textrm{application}             \\
+  \end{aligned}
+\end{equation*}
+
+\subsection{Evaluation and Values}
+
+Because of dependent types, computation is required during type-checking. An
+expression is \textit{evaluated} during type-checking to a \textit{value}. (See `Evaluator.hs`.)
+
+Values may contain \textit{closures}. A closure \textbf{$e^{\rho}$} is a pair of an expression $e$ and an
+\textit{environment} \textbf{$\rho$}.
+
+Environments provide bindings for the free variables occurring in the
+corresponding $e$.
+
+\subsubsection{Values}
+
+\begin{equation*}
+  \begin{aligned}
+    v &  & = &  & v \: (v_1 \dots v_n)     &  & \textrm{application}              \\
+      &  & | &  & Lam \: x \: e^{\rho}     &  & \textrm{abstraction}              \\
+      &  & | &  & Pi \: x \: v \: e^{\rho} &  & \textrm{dependent function space} \\
+      &  & | &  & k                        &  & \textrm{generic value}            \\
+      &  & | &  & \star                    &  & \textrm{universe of small types}  \\
+  \end{aligned}
+\end{equation*}
+
+$v \: (v_1 \dots v_n)$, $Lam \: x \: e^{\rho}$, and $Pi \: x \: v \: e^{\rho}$
+can be evaluated further (see more below) while $k$, $\star$, $c$, $f$, and $D$ are atomic values
+which cannot be evaluated further. A generic value *k* represents the computed value of a variable during type
+checking. More on this below.
+
+The closures in $Lam \: x \: e^{\rho}$, and $Pi \: x \: v \: e^{\rho}$ do not have a
+binding for $x$. If there is no concrete value, a fresh generic value $k$ would be
+the binding for $x$ so that the closures can be evaluated.
+
+\subsubsection{Evaluations}
+
+An expression $e$ in environment $\rho$ are evaluated as follows (as in
+Evaluator.hs):
+
+\begin{equation*}
+  \begin{aligned}
+    eval \: (\lambda x . e)^{\rho}   & = & Lam \: x \: e^{\rho}                                            \\
+    eval \: ((x:A) \to B)^{\rho}     & = & Pi \: x \: v_A \: B^{\rho}                                      \\
+                                     &   & \textrm{ where } v_A = eval \: A^{\rho}                         \\
+    eval \: (e e_1 \dots e_n)^{\rho} & = & app \: v \: v_1 \dots v_n                                       \\
+                                     &   & \textrm{ where } v = eval \: e^{\rho}, v_i = eval \: e_i^{\rho} \\
+    eval \: (\star)^{\rho}           & = & \star                                                           \\
+    eval \: c^{\rho}                 & = & c                                                               \\
+    eval \: f^{\rho}                 & = & f                                                               \\
+    eval \: x^{\rho}                 & = & \textrm{ value of } x \textrm{ in } \rho                        \\
+  \end{aligned}
+\end{equation*}
+
+Applications can be evaluated further as follows:
+
+\begin{equation*}
+  \begin{aligned}
+    app \: u \: ()                                             & = & u                                                      \\
+    app \: (u \: c_{11} \dots c_{1n}) \: (c_{21} \dots c_{2n}) & = & app \: u \: (c_{11} \dots c_{1n}, c_{21} \dots c_{2n}) \\
+    app \: (Lam \: x \: e^{\rho}) \: (v,(v_1 \dots v_n))       & = & app \: v' \: (v_1 \dots v_n)                           \\
+                                                               &   & \textrm{ where } v' = eval \: e^{\rho,x=v}             \\
+    app \: f \: (v_1 ... v_n)                                  & = & app_{fun} \: f \: (v_1 \dots v_n)                      \\
+                                                               &   & \textrm{ if } f \textrm{ is a function }               \\
+    app \: v \: (v_1 \dots v_n)                                & = & v \: (v_1 \dots v_n)                                   \\
+  \end{aligned}
+\end{equation*}
+
+
+
+\section{Strict Positivity Checks}
+\label{sec:spos}
+
+\section{Termination Checks}
+\label{sec:termination}
+
+\subsection{Syntactic Checks}
+
+\subsection{Type-based Checks}
+
+\section{Pattern Matching Coverage Checks}
+\label{sec:pattern}
+\end{document}
