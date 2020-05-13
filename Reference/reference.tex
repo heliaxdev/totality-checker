@@ -76,72 +76,174 @@ An expression $e$ is one of the following (as in `Types.hs`):
   \end{aligned}
 \end{equation*}
 
-\subsection{Evaluation and Values}
+\subsubsection{Functions}
+
+A function declaration $f$ is a sequence of function \textit{clauses}. 
+
+A clause consists of a sequence of \textrm{patterns} $p$, which are
+arguments to the function, and the right hand side expression $e$:  
+
+\begin{figure}[H]
+  \begin{equation*}
+    f \: (p_1 \dots p_n) = e
+  \end{equation*}
+  \caption{A Clause}
+\end{figure}
+
+A pattern $p$ is either a variable pattern, a constructor pattern (which
+consists of patterns), or an inaccessible pattern:
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      p &  & = &  & x                    &  & \textrm{variable pattern}     \\
+        &  & | &  & c \: (p_1 \dots p_n) &  & \textrm{constructor pattern}  \\
+        &  & | &  & \underline{e}        &  & \textrm{inaccessible pattern} \\
+    \end{aligned}
+  \end{equation*}
+  \caption{Patterns}
+\end{figure}
+
+\subsection{Values}
 
 Because of dependent types, computation is required during type-checking. An
-expression is \textit{evaluated} during type-checking to a \textit{value}. (See `Evaluator.hs`.)
-
-Values may contain \textit{closures}. A closure \textbf{$e^{\rho}$} is a pair of an expression $e$ and an
-\textit{environment} \textbf{$\rho$}.
+expression $e$ in an environment $\rho$ is \textit{evaluated} during type-checking to a \textit{value} $v$. (See `Evaluator.hs`.)
 
 Environments provide bindings for the free variables occurring in the
-corresponding $e$.
+corresponding $e$. Values of abstractions, dependent functions, and applications contain \textit{closures}. A closure \textbf{$e^{\rho}$} is a pair of an expression $e$ and an
+\textit{environment} \textbf{$\rho$}.
 
-\subsubsection{Values}
-
-\begin{equation*}
-  \begin{aligned}
-    v &  & = &  & v \: (v_1 \dots v_n)     &  & \textrm{application}              \\
-      &  & | &  & Lam \: x \: e^{\rho}     &  & \textrm{abstraction}              \\
-      &  & | &  & Pi \: x \: v \: e^{\rho} &  & \textrm{dependent function space} \\
-      &  & | &  & k                        &  & \textrm{generic value}            \\
-      &  & | &  & \star                    &  & \textrm{universe of small types}  \\
-  \end{aligned}
-\end{equation*}
+\begin{figure}[H]
+  \begin{equation*}
+    \label{eq:values}
+    \begin{aligned}
+      v &  & = &  & v \: (v_1 \dots v_n)     &  & \textrm{application}              \\
+        &  & | &  & Lam \: x \: e^{\rho}     &  & \textrm{abstraction}              \\
+        &  & | &  & Pi \: x \: v \: e^{\rho} &  & \textrm{dependent function space} \\
+        &  & | &  & k                        &  & \textrm{generic value}            \\
+        &  & | &  & \star                    &  & \textrm{universe of small types}  \\
+    \end{aligned}
+  \end{equation*}
+  \caption{Values}
+\end{figure}
 
 $v \: (v_1 \dots v_n)$, $Lam \: x \: e^{\rho}$, and $Pi \: x \: v \: e^{\rho}$
 can be evaluated further (see more below) while $k$, $\star$, $c$, $f$, and $D$ are atomic values
-which cannot be evaluated further. A generic value *k* represents the computed value of a variable during type
-checking. More on this below.
+which cannot be evaluated further. A generic value $k$ represents the computed value of a variable during type
+checking.
+
+\subsection{Signature}
+A signature $\Sigma$ carries information about all declared constants (constructors, data types, and functions). Each declaration adds newly defined constants to the signature, which is empty at the beginning. A signature contains the evaluated value (type) of the constant. Specifically, a signature maps:
+
+\begin{itemize}
+  \item a \textbf{function} to
+        \begin{enumerate}
+          \item its type ($v$)
+          \item its clauses
+          \item a boolean indicating whether the clauses have been type-checked,
+        \end{enumerate}
+  \item a \textbf{constructor} to its type ($v$),
+  \item a \textbf{data type} to its type ($v$) and the number of parameters.
+\end{itemize}
+
+\subsection{Evaluations}
+
+The $eval$ function evaluates an expression $e$ in environment $\rho$ to a
+$value$ as follows (see Evaluator.hs):
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      eval \: (\lambda x . e)^{\rho}   & = & Lam \: x \: e^{\rho}                                            \\
+      eval \: ((x:A) \to B)^{\rho}     & = & Pi \: x \: v_A \: B^{\rho}                                      \\
+                                       &   & \textrm{ where } v_A = eval \: A^{\rho}                         \\
+      eval \: (e e_1 \dots e_n)^{\rho} & = & app \: v \: v_1 \dots v_n                                       \\
+                                       &   & \textrm{ where } v = eval \: e^{\rho}, v_i = eval \: e_i^{\rho} \\
+      eval \: (\star)^{\rho}           & = & \star                                                           \\
+      eval \: c^{\rho}                 & = & c                                                               \\
+      eval \: f^{\rho}                 & = & f                                                               \\
+      eval \: x^{\rho}                 & = & \textrm{ value of } x \textrm{ in } \rho                        \\
+    \end{aligned}
+  \end{equation*}
+  \caption{Evaluation of Expressions}
+\end{figure}
 
 The closures in $Lam \: x \: e^{\rho}$, and $Pi \: x \: v \: e^{\rho}$ do not have a
 binding for $x$. If there is no concrete value, a fresh generic value $k$ would be
 the binding for $x$ so that the closures can be evaluated.
 
-\subsubsection{Evaluations}
+When possible, we perform $\beta$-reduction and inductive function application. The $app$ function takes in a $value$ as the first argument and a sequence of
+$value$s as the second argument, and returns a $value$: 
 
-An expression $e$ in environment $\rho$ are evaluated as follows (as in
-Evaluator.hs):
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      app \: u \: ()                                             & = & u                                                      \\
+      app \: (u \: c_{11} \dots c_{1n}) \: (c_{21} \dots c_{2n}) & = & app \: u \: (c_{11} \dots c_{1n}, c_{21} \dots c_{2n}) \\
+      app \: (Lam \: x \: e^{\rho}) \: (v,(v_1 \dots v_n))       & = & app \: v' \: (v_1 \dots v_n)                           \\
+                                                                 &   & \textrm{ where } v' = eval \: e^{\rho,x=v}             \\
+      app \: f \: (v_1 ... v_n)                                  & = & app_{fun} \: f \: (v_1 \dots v_n)                      \\
+                                                                 &   & \textrm{ if } f \textrm{ is a function }               \\
+    \end{aligned}
+  \end{equation*}
+  \caption{$\beta$-Reduction and Inductive Function Application}
+\end{figure}
 
-\begin{equation*}
-  \begin{aligned}
-    eval \: (\lambda x . e)^{\rho}   & = & Lam \: x \: e^{\rho}                                            \\
-    eval \: ((x:A) \to B)^{\rho}     & = & Pi \: x \: v_A \: B^{\rho}                                      \\
-                                     &   & \textrm{ where } v_A = eval \: A^{\rho}                         \\
-    eval \: (e e_1 \dots e_n)^{\rho} & = & app \: v \: v_1 \dots v_n                                       \\
-                                     &   & \textrm{ where } v = eval \: e^{\rho}, v_i = eval \: e_i^{\rho} \\
-    eval \: (\star)^{\rho}           & = & \star                                                           \\
-    eval \: c^{\rho}                 & = & c                                                               \\
-    eval \: f^{\rho}                 & = & f                                                               \\
-    eval \: x^{\rho}                 & = & \textrm{ value of } x \textrm{ in } \rho                        \\
-  \end{aligned}
-\end{equation*}
+When the first argument of $app$ is a function, we need to type-checked each
+clause of the function and thus pattern matching is required before we can evaluate $app$ further.
 
-Applications can be evaluated further as follows:
+\subsubsection{Pattern Matching and $app_{fun}$}
 
-\begin{equation*}
-  \begin{aligned}
-    app \: u \: ()                                             & = & u                                                      \\
-    app \: (u \: c_{11} \dots c_{1n}) \: (c_{21} \dots c_{2n}) & = & app \: u \: (c_{11} \dots c_{1n}, c_{21} \dots c_{2n}) \\
-    app \: (Lam \: x \: e^{\rho}) \: (v,(v_1 \dots v_n))       & = & app \: v' \: (v_1 \dots v_n)                           \\
-                                                               &   & \textrm{ where } v' = eval \: e^{\rho,x=v}             \\
-    app \: f \: (v_1 ... v_n)                                  & = & app_{fun} \: f \: (v_1 \dots v_n)                      \\
-                                                               &   & \textrm{ if } f \textrm{ is a function }               \\
-    app \: v \: (v_1 \dots v_n)                                & = & v \: (v_1 \dots v_n)                                   \\
-  \end{aligned}
-\end{equation*}
+To perform inductive function application, we need to type-checked all clauses
+of the function. To type-checked the clauses, we need to match all patterns of
+each clause. If all patterns of a clause match against the argument values, then
+the right hand side can be evaluated.
 
+The function $match$ takes three arguments:
 
+\begin{enumerate}
+  \item an environment $\rho$
+  \item a pattern $p$
+  \item a value $v$
+\end{enumerate}
+
+It returns an environment that binds the variables in the
+patterns to values:
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      match \: \rho \: \underline{e} \: v                               & = & \rho                                                 \\
+      match \: \rho \: x \: v                                           & = & \rho \textrm{ if } x = v                             \\
+      match \: \rho \: (c \: ()) \: c                                   & = & \rho                                                 \\
+      match \: \rho \: (c \: (p_1 \dots p_n)) \: (c \: (v_1 \dots v_n)) & = & matchList \: \rho (p_1 \dots p_n) \: (v_1 \dots v_n) \\
+    \end{aligned}
+  \end{equation*}
+  \textrm{ where }
+  \begin{equation*}
+    \begin{aligned}
+      matchList \: \rho \: () \: ()                        & = & \rho                                                                               \\
+      marchList \: \rho \: (p_1 \dots) \: e \: (v_1 \dots) & = & matchList \: \rho' \:(p_2 \dots) \: (v_2 \dots)                                    \\
+                                                           &   & \textrm{ where } \rho'                               = match \: \rho \: p_1 \: v_1 \\     
+    \end{aligned}
+  \end{equation*}
+  \caption{Pattern Matching}
+\end{figure}
+
+Pattern matching can fail and no environment is returned in such case. If pattern matching succeeds, we can move on to evaluating the right hand side expressions.
+
+The function $matchClause$ takes in four arguments:
+
+\begin{enumerate}
+  \item an environment $\rho$
+  \item a sequence of patterns $(p_1 \dots p_n)$
+  \item the right hand side expression $e$
+  \item a sequence of values $(v_1 \dots v_n)$
+\end{enumerate}
+
+%TODO It returns a $value$, which is the type of the 
+
+%to type checking the clauses with the right hand side expressions.
 
 \section{Strict Positivity Checks}
 \label{sec:spos}
