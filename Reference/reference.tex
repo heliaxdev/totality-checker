@@ -12,7 +12,7 @@
 \usepackage{hyperref}
 \begin{document}
 
-\title{Totality Checker for a Dependently Typed Language}
+\title{A Totality Checker for a Dependently Typed Language}
 
 %
 % The "author" command and its associated commands are used to define the authors and their affiliations.
@@ -35,12 +35,12 @@
 \section{Introduction}
 
 This is the reference document for the
-\href{https://github.com/thealmarty/termination-checker}{termination-checker}
+\href{https://github.com/thealmarty/totality-checker}{totality-checker}
 repository, which is a totality checker for a dependently typed language
-implemented in Haskell. The totality checker checks for:
+implemented in Haskell. The totality checker checks:
 
 \begin{enumerate}
-  \item strict positivity
+  \item strict positivity of constructors
   \item pattern matching coverage
   \item termination
 \end{enumerate}
@@ -133,18 +133,31 @@ which cannot be evaluated further. A generic value $k$ represents the computed v
 checking.
 
 \subsection{Signature}
-A signature $\Sigma$ carries information about all declared constants (constructors, data types, and functions). Each declaration adds newly defined constants to the signature, which is empty at the beginning. A signature contains the evaluated value (type) of the constant. Specifically, a signature maps:
+A signature $\Sigma$ carries information about all declared constants (constructors, data types, and functions). Each declaration adds newly defined constants to the signature, which is empty at the beginning. Each declaration that is added to the signature is a mapping of the constant to its information, including the evaluated value (type) of the constant. Specifically, a mapping in the signature maps:
 
 \begin{itemize}
   \item a \textbf{function} to
         \begin{enumerate}
-          \item its type ($v$)
+          \item its type
           \item its clauses
           \item a boolean indicating whether the clauses have been type-checked,
         \end{enumerate}
-  \item a \textbf{constructor} to its type ($v$),
-  \item a \textbf{data type} to its type ($v$) and the number of parameters.
+  \item a \textbf{constructor} to its type,
+  \item a \textbf{data type} to its type and the number of parameters.
 \end{itemize}
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      \Sigma f & : & (v, \textrm{a sequence of clauses}, \mathbb{B}) \\
+      \Sigma c & : & v                                               \\
+      \Sigma D & : & (v, \mathbb{I})                                 \\
+    \end{aligned}
+  \end{equation*}
+  \caption{Mapping types in a Signature}
+\end{figure}
+
+The signature is in a \textit{state} monad so that we can retrieve the signature during type and totality checking. The mapping of a constant may be added before the constant is type-checked. For a function constant, the mapping contains the information about whether the clauses have been type-checked or not.
 
 \subsection{Evaluations}
 
@@ -199,9 +212,9 @@ of the function. To match the clauses, we need to match all patterns of
 each clause. 
 
 If all patterns of a clause match against the argument values (checked by $match$ and $matchList$), then
-the right hand side can be evaluated (by $matchClause$). 
+the right hand side can be evaluated (by $match_{clause}$). 
 
-The sequence of clauses is then matched against the evaluated right hand side values (by $matchClauses$). Each clause is tried until one is matched or there are no clauses left. 
+The sequence of clauses is then matched against the evaluated right hand side values (by $match_{cls}$).
 
 The function $match$ takes three arguments:
 
@@ -234,9 +247,9 @@ patterns to values:
   \caption{Pattern Matching}
 \end{figure}
 
-Pattern matching can fail and no environment is returned in such case. $match$ is used in $matchClause$, which evaluates and returns the type of the right hand side expression of a given clause.
+Pattern matching can fail and no environment is returned in such case. $match$ is used in $match_{clause}$, which evaluates and returns the type of the right hand side expression of a given clause.
 
-The function $matchClause$ takes in four arguments:
+The function $match_{clause}$ takes in four arguments:
 
 \begin{enumerate}
   \item an environment $\rho$, which contains the variables in the matched patterns.
@@ -245,8 +258,56 @@ The function $matchClause$ takes in four arguments:
   \item a sequence of values $(v_1 \dots v_n)$
 \end{enumerate}
 
+It only returns a $value$ if $match$ returns an environment:
 
-%to type checking the clauses with the right hand side expressions.
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      match_{clause} \: \rho \: () \: e \: (v_1 \dots v_n)      & = & app \: v \: (v_1 \dots v_n)                                \\
+                                                                &   & \textrm{ where } v = eval \: e^{\rho}                      \\
+      match_{clause} \: \rho \: (p_1 \dots) \: e \: (v_1 \dots) & = & match_{clause} \: \rho' \: (p_2 \dots) \: e \: (v_2 \dots) \\
+                                                                &   & \textrm{ where } \rho' = match \: \rho \: p_1 \: v_1       \\                                                        
+    \end{aligned}
+  \end{equation*}
+  \caption{Matching All Patterns of a Single Clause}
+\end{figure}
+
+If all the patterns are matched in a clause, then it returns the $value$ of the application with the right hand side $e$ evaluated. If any of the patterns doesn't match, nothing is returned.
+
+$match_{cls}$ takes a sequence of clauses and a sequence of values as input and returns the matched clause's value:
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      match_{cls} \: ((f \: (p_1 \dots p_n) = e), clause_2, \dots) \: (v_1 \dots v_n) & = & v                                                               \\
+      \textrm{ where } v                                                              & = & match_{clause} \: () \: (p_1 \dots p_n) \: e \: (v_1 \dots v_n) \\
+      match_{cls} \: ((f \: (p_1 \dots p_n) = e), clause_2, \dots) \: (v_1 \dots v_n) & = & match_{cls} \: (clause_2 \dots) \: (v_1 \dots v_n)              \\
+    \end{aligned}
+  \end{equation*}
+  \caption{Matching All Clauses}
+\end{figure}
+
+Each clause is tried until one is matched or there are no clauses left. If there are no clauses left to match, then we failed to find a clause that matches all the patterns and nothing is returned. If nothing is returned, $app_{fun}$ cannot be reduced further. However, if a value is returned, and all clauses type-checked (see section \ref{sec:typeCheckPattern}), then we reduce $app_{fun}$ as follows:
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      app_{fun} \: f \: (v_1 \dots v_n) & =              & v                                                               \\
+                                        & \textrm{ if }  & \Sigma f = (t, (clause_1 \dots clause_n), True)                 \\
+                                        & \textrm{ and } & v = match_{cls} \: (clause_1 \dots clause_n) \: (v_1 \dots v_n) \\
+    \end{aligned}
+  \end{equation*}
+  \caption{$app_{fun}$}
+\end{figure}
+
+\subsection{Type Checking of Expressions}
+
+\subsection{Type Checking of Data Types}
+
+\subsection{Type Checking of Functions}
+
+\subsubsection{Type Checking of Patterns}
+\label{sec:typeCheckPattern}
 
 \section{Strict Positivity Checks}
 \label{sec:spos}

@@ -55,7 +55,7 @@ appFun n vl = do
   sig <- get
   case lookupSig n sig of
     (FunSig _ cl True) -> do
-      m <- matchClauses cl vl
+      m <- matchCls cl vl
       case m of
         Nothing -> return $ VApp (VDef n) vl
         Just v2 -> return v2
@@ -88,12 +88,12 @@ eqVals k (v1:vs1) (v2:vs2) = do
 eqVals _k _vl1 _vl2 = error "eqVals: mismatch number of arguments"
 
 -- pattern matching
-matchClauses :: [Clause] -> [Value] -> TypeCheck (Maybe Value)
-matchClauses [] _cll = return Nothing
-matchClauses (Clause pl rhs:cl2) cll = do
+matchCls :: [Clause] -> [Value] -> TypeCheck (Maybe Value)
+matchCls [] _cll = return Nothing
+matchCls (Clause pl rhs:cl2) cll = do
   x <- matchClause [] pl rhs cll
   case x of
-    Nothing -> matchClauses cl2 cll
+    Nothing -> matchCls cl2 cll
     Just v  -> return $ Just v
 
 matchClause :: Env -> [Pattern] -> Expr -> [Value] -> TypeCheck (Maybe Value)
