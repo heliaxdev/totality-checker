@@ -46,12 +46,12 @@ app (VApp u2 c2) c = app u2 (c2 <> c)
 app (VLam x env e) (v:vl) = do
   v' <- eval (updateEnv env x v) e
   app v' vl
-app (VDef n) c = appDef n c
+app (VDef n) c = appFun n c
 app u c = return $ VApp u c
 
 -- inductive function application
-appDef :: Name -> [Value] -> TypeCheck Value
-appDef n vl = do
+appFun :: Name -> [Value] -> TypeCheck Value
+appFun n vl = do
   sig <- get
   case lookupSig n sig of
     (FunSig _ cl True) -> do

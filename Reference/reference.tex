@@ -194,10 +194,14 @@ clause of the function and thus pattern matching is required before we can evalu
 
 \subsubsection{Pattern Matching and $app_{fun}$}
 
-To perform inductive function application, we need to type-checked all clauses
-of the function. To type-checked the clauses, we need to match all patterns of
-each clause. If all patterns of a clause match against the argument values, then
-the right hand side can be evaluated.
+To perform inductive function application, we need to match all clauses
+of the function. To match the clauses, we need to match all patterns of
+each clause. 
+
+If all patterns of a clause match against the argument values (checked by $match$ and $matchList$), then
+the right hand side can be evaluated (by $matchClause$). 
+
+The sequence of clauses is then matched against the evaluated right hand side values (by $matchClauses$). Each clause is tried until one is matched or there are no clauses left. 
 
 The function $match$ takes three arguments:
 
@@ -230,18 +234,17 @@ patterns to values:
   \caption{Pattern Matching}
 \end{figure}
 
-Pattern matching can fail and no environment is returned in such case. If pattern matching succeeds, we can move on to evaluating the right hand side expressions.
+Pattern matching can fail and no environment is returned in such case. $match$ is used in $matchClause$, which evaluates and returns the type of the right hand side expression of a given clause.
 
 The function $matchClause$ takes in four arguments:
 
 \begin{enumerate}
-  \item an environment $\rho$
+  \item an environment $\rho$, which contains the variables in the matched patterns.
   \item a sequence of patterns $(p_1 \dots p_n)$
   \item the right hand side expression $e$
   \item a sequence of values $(v_1 \dots v_n)$
 \end{enumerate}
 
-%TODO It returns a $value$, which is the type of the 
 
 %to type checking the clauses with the right hand side expressions.
 
