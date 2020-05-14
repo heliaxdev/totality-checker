@@ -1,7 +1,7 @@
-name:                termination-checker
+name:                totality-checker
 version:             0.1.0.0
-github:              "thealmarty/termination-checker"
-license:             GPL3
+github:              "thealmarty/totality-checker"
+license:             GPL-3
 author:              "Marty Stumpf"
 maintainer:          "thealmartyblog@gmail.com"
 copyright:           "2020 Marty Stumpf; 2020 Cryptium Labs"
@@ -10,7 +10,7 @@ extra-source-files:
 - README.md
 - ChangeLog.md
 
-description:         Please see the README on GitHub at <https://github.com/githubuser/termination-checker#readme>
+description:         Please see the README on GitHub at <https://github.com/githubuser/totality-checker#readme>
 
 dependencies:
 - base >= 4.7 && < 5
@@ -30,16 +30,16 @@ library:
   source-dirs: src
 
 executables:
-  termination-checker-exe:
+  totality-checker-exe:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
     - -Wall
     dependencies:
-    - termination-checker
+    - totality-checker
 
 tests:
-  termination-checker-test:
+  totality-checker-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
@@ -47,4 +47,4 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - termination-checker
+    - totality-checker
