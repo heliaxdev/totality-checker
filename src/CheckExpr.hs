@@ -8,8 +8,8 @@ import           Types
 
 -- checks that input Expr has the type v (second input)
 -- k is the subjected generic value
--- env rho will be used to bind fresh generic values to variables
--- env gamma will bind the type value corresponding to these generic values
+-- env rho binds fresh generic values to variables
+-- env gamma binds the type value corresponding to these generic values
 checkExpr :: Int -> Env -> Env -> Expr -> Value -> TypeCheck ()
 checkExpr k rho gamma (Lam n e1) (VPi x va env t1) = do
   v_t1 <- eval (updateEnv env x (VGen k)) t1

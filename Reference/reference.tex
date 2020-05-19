@@ -107,10 +107,10 @@ consists of patterns), or an inaccessible pattern:
 \subsection{Values}
 
 Because of dependent types, computation is required during type-checking. An
-expression $e$ in an environment $\rho$ is \textit{evaluated} during type-checking to a \textit{value} $v$. (See `Evaluator.hs`.)
+expression $e$ in an environment $\rho$ is \textit{evaluated} during type-checking to a type or a \textit{value} $v$. (See `Evaluator.hs`.)
 
 Environments provide bindings for the free variables occurring in the
-corresponding $e$. Values of abstractions, dependent functions, and applications contain \textit{closures}. A closure \textbf{$e^{\rho}$} is a pair of an expression $e$ and an
+corresponding $e$. Thus, an environment $\rho$ is a list of pairs of variable and its type. Values of abstractions, dependent functions, and applications contain \textit{closures}. A closure \textbf{$e^{\rho}$} is a pair of an expression $e$ and an
 \textit{environment} \textbf{$\rho$}.
 
 \begin{figure}[H]
@@ -149,9 +149,9 @@ A signature $\Sigma$ carries information about all declared constants (construct
 \begin{figure}[H]
   \begin{equation*}
     \begin{aligned}
-      \Sigma f & : & (v, \textrm{a sequence of clauses}, \mathbb{B}) \\
-      \Sigma c & : & v                                               \\
-      \Sigma D & : & (v, \mathbb{I})                                 \\
+      \Sigma f & : & (\textrm{value, a sequence of clauses, boolean}) \\
+      \Sigma c & : & \textrm{value}                                   \\
+      \Sigma D & : & (\textrm{value, integer})                        \\
     \end{aligned}
   \end{equation*}
   \caption{Mapping types in a Signature}
@@ -202,7 +202,7 @@ $value$s as the second argument, and returns a $value$:
   \caption{$\beta$-Reduction and Inductive Function Application}
 \end{figure}
 
-When the first argument of $app$ is a function, we need to type-checked each
+Regarding $app_{fun}$: when the first argument of $app$ is a function, we need to type-checked each
 clause of the function and thus pattern matching is required before we can evaluate $app$ further.
 
 \subsubsection{Pattern Matching and $app_{fun}$}
@@ -224,14 +224,17 @@ The function $match$ takes three arguments:
   \item a value $v$
 \end{enumerate}
 
-It returns an environment that binds the variables in the
-patterns to values:
+When the pattern is \textbf{inaccessible}, it returns the input environment.
+
+When the pattern is a \textbf{variable}, it returns an environment that binds the variables in the patterns to values ($x$ to $v$) .
+
+When the pattern is a \textbf{constructor}, it returns the input environment if the constructor name(s) match(s) the input value.
 
 \begin{figure}[H]
   \begin{equation*}
     \begin{aligned}
       match \: \rho \: \underline{e} \: v                               & = & \rho                                                 \\
-      match \: \rho \: x \: v                                           & = & \rho \textrm{ if } x = v                             \\
+      match \: \rho \: x \: v                                           & = & \rho \textrm{ with } (x, v) \textrm{ added.}         \\
       match \: \rho \: (c \: ()) \: c                                   & = & \rho                                                 \\
       match \: \rho \: (c \: (p_1 \dots p_n)) \: (c \: (v_1 \dots v_n)) & = & matchList \: \rho (p_1 \dots p_n) \: (v_1 \dots v_n) \\
     \end{aligned}
@@ -287,7 +290,7 @@ $match_{cls}$ takes a sequence of clauses and a sequence of values as input and 
   \caption{Matching All Clauses}
 \end{figure}
 
-Each clause is tried until one is matched or there are no clauses left. If there are no clauses left to match, then we failed to find a clause that matches all the patterns and nothing is returned. If nothing is returned, $app_{fun}$ cannot be reduced further. However, if a value is returned, and all clauses type-checked (see section \ref{sec:typeCheckPattern}), then we reduce $app_{fun}$ as follows:
+Each clause is tried until one is matched or there are no clauses left. If there are no clauses left to match, then we failed to find a clause that matches all the patterns and nothing is returned. If nothing is returned, $app_{fun}$ cannot be reduced further. If a value is returned, and all clauses are type-checked (see section \ref{sec:typeCheckPattern}), then we can apply the function. We reduce $app_{fun}$ as follows:
 
 \begin{figure}[H]
   \begin{equation*}
@@ -301,6 +304,58 @@ Each clause is tried until one is matched or there are no clauses left. If there
 \end{figure}
 
 \subsection{Type Checking of Expressions}
+
+Recall that declarations consist of expressions. Type checking a declaration therefore comprises type checking an expression. 
+
+We use the bidirectional type checking technique. The type-checker has two modes:
+
+\begin{enumerate}
+  \item $checkExpr$ checks that the input expression $e$ is of type $v$.
+  \item $inferExpr$ infers the type of the input expression.
+\end{enumerate}
+
+$checkExpr$ uses $inferExpr$ as needed to infer the type of the input expression and check that it is \textit{equal} to the input type. $eqVal$ defines the equality of two values.
+
+$checkExpr$, $inferExpr$, and $eqVal$ are simultanously defined in the next sections. They all have the same return type: a state transformer monad $StateT \: Signature \: IO \: ()$. The state is the signature, which contains information for type checking of data type/function declarations. The inner monad is the IO monad. When type checking succeeds, it returns $()$. When it fails, an error occurs.
+
+\subsubsection{$checkExpr$}
+\label{sec:checkExpr}
+
+$checkExpr$ takes 5 arguments:
+
+\begin{enumerate}
+  \item $k$, the subjected generic value.
+  \item environment $\rho$, which is a list of pairs of $n$ (variable name) and $VGen \: k$ that binds a fresh generic value to a variable.
+  \item environment $\Gamma$, which is a list of pairs of $n$ and $v$ that binds the type value to a variable.
+  \item expression $e$, the expression being checked.
+  \item value $v$, the supposed type of the expression.
+\end{enumerate}
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      checkExpr \: k \: \rho \: \Gamma \: (\lambda \: x.e) \: v  & = & checkExpr \: (k + 1) \: \rho' \: \Gamma' \:e \: v'          \\
+                                                                 &   & \textrm{ where } v = Pi \: y \: v_A \: t^{\rho}             \\ 
+                                                                 &   & \rho' = \rho : (x, k),                                      \\
+                                                                 &   & \Gamma' = \Gamma : (x, v_A),                                \\
+                                                                 &   & v' = eval \: t^{\rho:(y, k)}                                \\
+      checkExpr \: k \: \rho \: \Gamma \: ((x:A) \to B) \: \star & = & checkExpr \: k \: \rho \: \Gamma A \star              \land \\
+                                                                 &   & checkExpr \: (k+1) \: \rho' \: \Gamma' \: B \: \star        \\
+                                                                 &   & \textrm{ where } \rho' = \rho : (x, k),                     \\
+                                                                 &   & \Gamma' = \Gamma:(x, eval \: A^{\rho}).                     \\
+      checkExpr \: k \: \rho \: \Gamma \: e \: v                 & = & inferExpr \: k \: \rho \: \Gamma \: e \: 'eqVal' \: v       \\
+    \end{aligned}
+  \end{equation*}
+  \caption{Checking Expressions, checkExpr}
+\end{figure}
+
+%When the input expression is \textbf{$\lambda \: x.e$}, type checking is successful if the input type is \textbf{$Pi \: y \: v_A \: t^{\rho}$} and
+
+
+
+\subsubsection{$inferExpr$}
+
+\subsubsection{$eqVal$}
 
 \subsection{Type Checking of Data Types}
 
