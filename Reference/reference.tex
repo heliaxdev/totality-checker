@@ -207,8 +207,8 @@ clause of the function and thus pattern matching is required before we can evalu
 
 \subsubsection{Pattern Matching and $app_{fun}$}
 
-To perform inductive function application, we need to match all clauses
-of the function. To match the clauses, we need to match all patterns of
+To perform inductive function application, we need to find a clause that matches all patterns. We match all clauses
+of the function until we find the clause. To match the clauses, we need to match all patterns of
 each clause. 
 
 If all patterns of a clause match against the argument values (checked by $match$ and $matchList$), then
@@ -316,7 +316,7 @@ We use the bidirectional type checking technique. The type-checker has two modes
 
 $checkExpr$ uses $inferExpr$ as needed to infer the type of the input expression and check that it is \textit{equal} to the input type. $eqVal$ defines the equality of two values.
 
-$checkExpr$, $inferExpr$, and $eqVal$ are simultanously defined in the next sections. They all have the same return type: a state transformer monad $StateT \: Signature \: IO \: ()$. The state is the signature, which contains information for type checking of data type/function declarations. The inner monad is the IO monad. When type checking succeeds, it returns $()$. When it fails, an error occurs.
+$checkExpr$, $inferExpr$, and $eqVal$ are simultanously defined in the next sections. They all return a state transformer monad $StateT \: Signature \: IO \: a$. The state is the signature, which contains information for type checking of data type/function declarations. The inner monad is the IO monad. $a$ is unit for $checkExpr$ and $eqVal$. If no error occurs, each step returns $()$. $a$ is $value$ for $inferExpr$.
 
 \subsubsection{$checkExpr$}
 \label{sec:checkExpr}
@@ -330,6 +330,8 @@ $checkExpr$ takes 5 arguments:
   \item expression $e$, the expression being checked.
   \item value $v$, the supposed type of the expression.
 \end{enumerate}
+
+Unless an error occurs, it returns a unit.
 
 \begin{figure}[H]
   \begin{equation*}
@@ -351,9 +353,29 @@ $checkExpr$ takes 5 arguments:
 
 %When the input expression is \textbf{$\lambda \: x.e$}, type checking is successful if the input type is \textbf{$Pi \: y \: v_A \: t^{\rho}$} and
 
-
-
 \subsubsection{$inferExpr$}
+
+$inferExpr$ takes 4 arguments, which is the same first 4 arguments taken in by $checkExpr$. Unless an error occurs, it returns the inferred type of the input expression.
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      inferExpr \: k \: \rho \: \Gamma \: (e_1 \: e_2)                & = & eval \: B^{\rho:(x,eval \: e_2^{\rho})}                                                        \\
+                                                                      &   & \textrm{ where } inferExpr \: k \: \rho \: \Gamma \: e_1 = Pi \: x \: v_A \: B^{\rho} \: \land \\
+                                                                      &   & checkExpr \: k \: \rho \: \Gamma \: e_2 \: v_A                                                 \\
+      inferExpr \: k \: \rho \: \Gamma \: e_1 \: (e_2 \: (e_3 \dots)) & = & v                                                                                              \\
+                                                                      &   & \textrm{ where } inferExpr \: k \: \rho \: \Gamma \: (e_1 \: e_2) \: (e_3 \dots) = v           \\                                                      
+      inferExpr \: k \: \rho \: \Gamma \: x                           & = & \textrm{value of x in } \Gamma                                                                 \\
+      inferExpr \: k \: \rho \: \Gamma \: f                           & = & v                                                                                              \\
+                                                                      &   & \textrm{ where } \Sigma \: f = (v,\_,\_) \textrm{ in the Signature.}                           \\
+      inferExpr \: k \: \rho \: \Gamma \: c                           & = & v                                                                                              \\
+                                                                      &   & \textrm{ where } \Sigma \: c = v \textrm{ in the Signature.}                                   \\
+      inferExpr \: k \: \rho \: \Gamma \: D                           & = & v                                                                                              \\
+                                                                      &   & \textrm{ where } \Sigma \: D = (v,\_) \textrm{ in the Signature.}                              \\                                            
+    \end{aligned}
+  \end{equation*}
+  \caption{Inferring Expressions, InferExpr}
+\end{figure}
 
 \subsubsection{$eqVal$}
 
