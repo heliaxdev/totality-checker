@@ -331,7 +331,7 @@ $checkExpr$ takes 5 arguments:
   \item value $v$, the supposed type of the expression.
 \end{enumerate}
 
-Unless an error occurs, it returns a unit.
+If the expression does not have a type equal $v$, an error occurs. Unless an error occurs, it returns a unit.
 
 \begin{figure}[H]
   \begin{equation*}
@@ -345,10 +345,10 @@ Unless an error occurs, it returns a unit.
                                                                  &   & checkExpr \: (k+1) \: \rho' \: \Gamma' \: B \: \star        \\
                                                                  &   & \textrm{ where } \rho' = \rho : (x, k),                     \\
                                                                  &   & \Gamma' = \Gamma:(x, eval \: A^{\rho}).                     \\
-      checkExpr \: k \: \rho \: \Gamma \: e \: v                 & = & inferExpr \: k \: \rho \: \Gamma \: e \: 'eqVal' \: v       \\
+      checkExpr \: k \: \rho \: \Gamma \: e \: v                 & = & eqVal \: k \: (inferExpr \: k \: \rho \: \Gamma \: e) \: v  \\
     \end{aligned}
   \end{equation*}
-  \caption{Checking Expressions, checkExpr}
+  \caption{Checking Expressions, $checkExpr$}
 \end{figure}
 
 %When the input expression is \textbf{$\lambda \: x.e$}, type checking is successful if the input type is \textbf{$Pi \: y \: v_A \: t^{\rho}$} and
@@ -374,10 +374,35 @@ $inferExpr$ takes 4 arguments, which is the same first 4 arguments taken in by $
                                                                       &   & \textrm{ where } \Sigma \: D = (v,\_) \textrm{ in the Signature.}                              \\                                            
     \end{aligned}
   \end{equation*}
-  \caption{Inferring Expressions, InferExpr}
+  \caption{Inferring Expressions, $InferExpr$}
 \end{figure}
 
 \subsubsection{$eqVal$}
+
+To check if values $v_1$ and $v_2$ are equal, $eqVal$ takes 3 arguments:
+
+\begin{enumerate}
+  \item $k$, the generic value being examined.
+  \item $v_1$
+  \item $v_2$
+\end{enumerate}
+
+If $v_1$ does not equal to $v_2$, an error occurs. Unless an error occurs, it returns a unit.
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      eqVal \: k \: (v \: (v_1 \dots v_n)) \: (w \: (w_1 \dots w_n))                       & = & eqVal \: k \:v \: w \: \land                                                                     \\                                                                  
+                                                                                           &   & eqVal \: k \: v_j \: w_j, \: \forall j \in \: \{1 \dots n\}                                      \\
+      eqVal \: k \: (Pi \: x_1 \: v_1 \: b_1^{\rho}) \: (Pi \: x_2 \: v_2 \: b_2^{\Gamma}) & = & eqVal \: k \: v_1 \: v_2 \: \land                                                                \\                                                
+                                                                                           &   & eqVal \: (k+1) \: (eval \: b_1^{\rho \: : \: (x_1,k)}) \: (eval \: b_2^{\Gamma \: : \: (x_2,k)}) \\
+      eqVal \: k \: (Lam \: x_1 \: e_1^{\rho}) \: (Lam \: x_2 \: e_2^{\Gamma})             & = & eqVal \: (k+1) \: (eval \: e_1^{\rho \: : \: (x_1,k)}) \: (eval \: e_2^{\Gamma \: : \: (x_2,k)}) \\
+      eqVal \: k \: v_1 \: v_2, v_1,v_2 \in \textrm{atomic values}                         & = & v_1 = v_2                                                                                        \\
+    \end{aligned}
+  \end{equation*}
+  \caption{Equality of Values, $eqVal$}
+\end{figure}
+
 
 \subsection{Type Checking of Data Types}
 
