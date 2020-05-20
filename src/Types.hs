@@ -89,8 +89,13 @@ data Sized -- distinguish between sized and not sized data type.
   | NotSized
   deriving (Eq, Show)
 
--- declarations are either (inductive) data type or function
+-- declarations are either (inductive) data types or functions
 data Declaration
+  -- a data declaration has a name,
+  -- the positivity of its parameters,
+  -- the telescope for its parameters,
+  -- the expression,
+  -- the list of constructors.
   = DataDecl Name Sized [Pos] Telescope Expr [TypeSig]
   | FunDecl [(TypeSig, [Clause])]
   deriving (Eq, Show)
@@ -99,11 +104,12 @@ data TypeSig =
   TypeSig Name Expr
   deriving (Eq, Show)
 
-type TBind = (Name, Expr)
-
 -- A telescope is a sequence of types where
 -- later types may depend on elements of previous types.
+-- Used for parameters of data type declarations.
 type Telescope = [TBind]
+
+type TBind = (Name, Expr)
 
 data Clause =
   Clause [Pattern] Expr

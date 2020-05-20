@@ -403,8 +403,38 @@ If $v_1$ does not equal to $v_2$, an error occurs. Unless an error occurs, it re
   \caption{Equality of Values, $eqVal$}
 \end{figure}
 
-
 \subsection{Type Checking of Data Types}
+
+In this section I describe how data type declarations are type checked.
+
+A data type $D$, parameterized by parameters $p_1 \dots p_n$, indexed over $\Theta$, inductively defined by the constructors $c_1 \dots c_n$ with the given types, is declared as follows:
+
+\begin{equation*}
+  \begin{aligned}
+    data &  & \: D \: (p_1:P_1) \dots (p_n:P_n) : \Theta \to \star       \\
+         &  & c_1 : \Delta_1 \to D \: p_1 \dots p_n \: t_1^1 \dots t_m^1 \\
+         &  & \dots                                                      \\
+         &  & c_k : \Delta_k \to D \: p_1 \dots p_n \: t_1^k \dots t_m^k \\                                                           \\
+  \end{aligned}
+\end{equation*}
+
+The parameters and their types, $(p_1:P_1) \dots (p_n:P_n)$, are stored in a \textit{telescope}, $\tau$:
+\begin{equation*}
+  \tau = (p_1:P_1) \dots (p_n:P_n)  
+\end{equation*}
+
+
+For a data type to type checked, the following must hold:
+
+\begin{itemize}
+  \item A data type family $D$ has type $\star$.
+  \item Its constructor $c_i$ has type $D \: p_1 \dots p_n \: t_1^i \dots t_m^i$ where $t_1^i \dots t_m^i \in \Theta$.
+  \item The constructor arguments (in $\Delta_i$) need to be of type $\star$.
+  \item The declaration must have the form such that the parameters in the result type of every constructor exactly match those of the telescope $\tau$.
+\end{itemize}
+
+
+each of its constructor has to type check.
 
 \subsection{Type Checking of Functions}
 

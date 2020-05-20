@@ -37,7 +37,7 @@ typeToTele t = ttt t []
 -- check data type
 -- check that params are types
 -- check that arguments are Star types
--- check that target is set
+-- check that target is of type Star
 checkDataType :: Int -> Env -> Env -> Int -> Expr -> TypeCheck ()
 checkDataType k rho gamma p (Pi x t1 t2) = do
   _ <-
