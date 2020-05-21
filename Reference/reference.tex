@@ -437,13 +437,43 @@ For a data type to type-checked, the following conditions must hold. The functio
   \item All constructors are type-checked. ($\boldsymbol{typeCheckConstructor}$)
 \end{enumerate}
 
+In $\boldsymbol{typeCheckConstructor}$, one of the step is the function $\boldsymbol{sposConstructor}$, which checks that the constructors are strictly positive. I describe the details of the mechanism of this check in section \ref{sec:spos}. 
+
 \subsection{Type Checking of Functions}
+
+In this section I describe how function declarations are type checked. See \emph{$checkFunction.hs$}.
+
+Recall that a function $f$ has one or more clauses, each clause contains pattern(s) $p$ and the right hand side $e$:
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      f \: (p_{11} \dots p_{1n}) = e_1 \\
+      \dots                            \\
+      f \: (p_{m1} \dots p_{mn}) = e_m \\
+    \end{aligned}
+  \end{equation*}
+  \caption{A Function with $m$ Clauses}
+\end{figure}
+
+To type-check a function, we type-check all its clauses. 
+
+To type-check a clause, we first type-check all its patterns, yielding an environment for the free variables in the right hand side $e$. After that, we check the right hand side.
 
 \subsubsection{Type Checking of Patterns}
 \label{sec:typeCheckPattern}
 
+We check the patterns in two phases. In the first phase, we skip \emph{inaccessible} patterns, and only check the accessible part of the patterns. 
+
+The inaccessible patterns are represented by fresh \emph{flexible} generic values. These flexible generic values are instantiated to concrete values when checking constructor patterns. 
+
+In the second phase, we verify that the expressions of the inaccessible patterns equal to those instantiated in the first phase.
+
 \section{Strict Positivity Checks}
 \label{sec:spos}
+
+
+
 
 \section{Termination Checks}
 \label{sec:termination}
