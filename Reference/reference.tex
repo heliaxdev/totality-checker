@@ -32,6 +32,8 @@
 % the first part of the formatted document.
 \maketitle
 \thispagestyle{empty}
+\tableofcontents
+\clearpage
 \section{Introduction}
 
 This is the reference document for the
@@ -54,31 +56,31 @@ termination in section \ref{sec:termination}. Finally, I describe the mechanism
 for checking the patterns of a function cover all cases in section
 \ref{sec:pattern}.
 
-\section{Preliminaries (type checking without totality checks)}
+\section{type checking without totality checks}
 \label{sec:prelim}
-The type checker checks \textit{data type} and \textit{function} declarations. These declarations
-consist of \textit{expressions}.
+The type checker checks \emph{data type} and \emph{function} declarations. These declarations
+consist of \emph{expressions}. Because of dependent types, we need to \emph{evaulate} expressions to \emph{values} during type checking. We also need a \emph{signature} that collects and carries information about the declarations during type checking.
 
 \subsection{Expressions}
 
-An expression $e$ is one of the following (as in `Types.hs`):
+An expression $e$ is one of the following (as in $Types.hs$):
 
 \begin{equation*}
   \begin{aligned}
-    e &  & = &  & \star           &  & \textrm{universe of small types} \\
-      &  & | &  & x               &  & \textrm{variable}                \\
-      &  & | &  & c               &  & \textrm{constructor name}        \\
-      &  & | &  & D               &  & \textrm{data type name}          \\
-      &  & | &  & f               &  & \textrm{function name}           \\
-      &  & | &  & \lambda x.e     &  & \textrm{abstraction}             \\
-      &  & | &  & (x:A) \to B     &  & \textrm{dependent function type} \\
-      &  & | &  & e e_1 \dots e_n &  & \textrm{application}             \\
+    e &  & = &  & \star              &  & \textrm{universe of small types} \\
+      &  & | &  & x                  &  & \textrm{variable (name)}         \\
+      &  & | &  & c                  &  & \textrm{constructor (name)}      \\
+      &  & | &  & D                  &  & \textrm{data type (name)}        \\
+      &  & | &  & f                  &  & \textrm{function (name)}         \\
+      &  & | &  & \lambda x.e        &  & \textrm{abstraction}             \\
+      &  & | &  & (x:A) \to B        &  & \textrm{dependent function type} \\
+      &  & | &  & e \: e_1 \dots e_n &  & \textrm{application}             \\
   \end{aligned}
 \end{equation*}
 
 \subsubsection{Functions}
 
-A function declaration $f$ is a sequence of function \textit{clauses}. 
+A function declaration $f$ is a sequence of function \emph{clauses}. 
 
 A clause consists of a sequence of \textrm{patterns} $p$, which are
 arguments to the function, and the right hand side expression $e$:  
@@ -107,11 +109,11 @@ consists of patterns), or an inaccessible pattern:
 \subsection{Values}
 
 Because of dependent types, computation is required during type-checking. An
-expression $e$ in an environment $\rho$ is \textit{evaluated} during type-checking to a type or a \textit{value} $v$. (See `Evaluator.hs`.)
+expression $e$ in an environment $\rho$ is \emph{evaluated} during type-checking to a type or a \emph{value} $v$.
 
 Environments provide bindings for the free variables occurring in the
-corresponding $e$. Thus, an environment $\rho$ is a list of pairs of variable and its type. Values of abstractions, dependent functions, and applications contain \textit{closures}. A closure \textbf{$e^{\rho}$} is a pair of an expression $e$ and an
-\textit{environment} \textbf{$\rho$}.
+corresponding $e$. Thus, an environment $\rho$ is a list of pairs of variable and its type. Values of abstractions, dependent functions, and applications contain \emph{closures}. A closure $\boldsymbol{e^{\rho}}$ is a pair of an expression $e$ and an
+\emph{environment} $\boldsymbol{\rho}$.
 
 \begin{figure}[H]
   \begin{equation*}
@@ -128,9 +130,9 @@ corresponding $e$. Thus, an environment $\rho$ is a list of pairs of variable an
 \end{figure}
 
 $v \: (v_1 \dots v_n)$, $Lam \: x \: e^{\rho}$, and $Pi \: x \: v \: e^{\rho}$
-can be evaluated further (see more below) while $k$, $\star$, $c$, $f$, and $D$ are atomic values
-which cannot be evaluated further. A generic value $k$ represents the computed value of a variable during type
-checking.
+can be evaluated further (see below) while $k$, $\star$, $c$, $f$, and $D$ are \emph{atomic values}
+which cannot be evaluated further. A generic value $k$ represents the value of a variable during type
+checking. $k \in$ integer, starts from 1. It is also used to collect inaccessible patterns during type checking. More below. 
 
 \subsection{Signature}
 A signature $\Sigma$ carries information about all declared constants (constructors, data types, and functions). Each declaration adds newly defined constants to the signature, which is empty at the beginning. Each declaration that is added to the signature is a mapping of the constant to its information, including the evaluated value (type) of the constant. Specifically, a mapping in the signature maps:
@@ -157,12 +159,12 @@ A signature $\Sigma$ carries information about all declared constants (construct
   \caption{Mapping types in a Signature}
 \end{figure}
 
-The signature is in a \textit{state} monad so that we can retrieve the signature during type and totality checking. The mapping of a constant may be added before the constant is type-checked. For a function constant, the mapping contains the information about whether the clauses have been type-checked or not.
+The signature is in a \emph{state} monad so that we can retrieve the signature during type and totality checking. The mapping of a constant may be added before the constant is type-checked. For a function constant, the mapping contains the information about whether the clauses have been type-checked or not.
 
 \subsection{Evaluations}
 
 The $eval$ function evaluates an expression $e$ in environment $\rho$ to a
-$value$ as follows (see Evaluator.hs):
+$value$ as follows (see $Evaluator.hs$):
 
 \begin{figure}[H]
   \begin{equation*}
@@ -295,9 +297,9 @@ Each clause is tried until one is matched or there are no clauses left. If there
 \begin{figure}[H]
   \begin{equation*}
     \begin{aligned}
-      app_{fun} \: f \: (v_1 \dots v_n) & =              & v                                                               \\
-                                        & \textrm{ if }  & \Sigma f = (t, (clause_1 \dots clause_n), True)                 \\
-                                        & \textrm{ and } & v = match_{cls} \: (clause_1 \dots clause_n) \: (v_1 \dots v_n) \\
+      app_{fun} \: f \: (v_1 \dots v_n) & =             & v                                                               \\
+                                        & \textrm{ if } & \Sigma f = (t, (clause_1 \dots clause_n), True)                 \\
+                                        & \land         & v = match_{cls} \: (clause_1 \dots clause_n) \: (v_1 \dots v_n) \\
     \end{aligned}
   \end{equation*}
   \caption{$app_{fun}$}
@@ -305,7 +307,7 @@ Each clause is tried until one is matched or there are no clauses left. If there
 
 \subsection{Type Checking of Expressions}
 
-Recall that declarations consist of expressions. Type checking a declaration therefore comprises type checking an expression. 
+Recall that declarations consist of expressions. Type checking a declaration therefore comprises type checking expressions. See $CheckExpr.hs$. 
 
 We use the bidirectional type checking technique. The type-checker has two modes:
 
@@ -314,9 +316,11 @@ We use the bidirectional type checking technique. The type-checker has two modes
   \item $inferExpr$ infers the type of the input expression.
 \end{enumerate}
 
-$checkExpr$ uses $inferExpr$ as needed to infer the type of the input expression and check that it is \textit{equal} to the input type. $eqVal$ defines the equality of two values.
+$checkExpr$ uses $inferExpr$ as needed to infer the type of the input expression and check that it is \emph{equal} to the input type. $eqVal$ defines the equality of two values.
 
-$checkExpr$, $inferExpr$, and $eqVal$ are simultanously defined in the next sections. They all return a state transformer monad $StateT \: Signature \: IO \: a$. The state is the signature, which contains information for type checking of data type/function declarations. The inner monad is the IO monad. $a$ is unit for $checkExpr$ and $eqVal$. If no error occurs, each step returns $()$. $a$ is $value$ for $inferExpr$.
+$checkExpr$, $inferExpr$, and $eqVal$ are simultanously defined in the next sections. They all return a state transformer monad $StateT \: Signature \: IO \: a$. The state is the signature, which contains information for type checking of data type/function declarations. The inner monad is the $IO$ monad. 
+
+$a$ is $unit$ for $checkExpr$ and $eqVal$. If no error occurs, each step of the $IO$ returns $()$. $a$ is $value$ for $inferExpr$, because $inferExpr$ returns the type of the input expression.
 
 \subsubsection{$checkExpr$}
 \label{sec:checkExpr}
@@ -325,13 +329,13 @@ $checkExpr$ takes 5 arguments:
 
 \begin{enumerate}
   \item $k$, the subjected generic value.
-  \item environment $\rho$, which is a list of pairs of $n$ (variable name) and $VGen \: k$ that binds a fresh generic value to a variable.
+  \item environment $\rho$, which is a list of pairs of $n$ (variable name) and $k$ that binds a fresh generic value to a variable.
   \item environment $\Gamma$, which is a list of pairs of $n$ and $v$ that binds the type value to a variable.
   \item expression $e$, the expression being checked.
   \item value $v$, the supposed type of the expression.
 \end{enumerate}
 
-If the expression does not have a type equal $v$, an error occurs. Unless an error occurs, it returns a unit.
+If the expression does not have a type equal $v$, an error occurs. Unless an error occurs, it returns a $unit$.
 
 \begin{figure}[H]
   \begin{equation*}
@@ -350,8 +354,6 @@ If the expression does not have a type equal $v$, an error occurs. Unless an err
   \end{equation*}
   \caption{Checking Expressions, $checkExpr$}
 \end{figure}
-
-%When the input expression is \textbf{$\lambda \: x.e$}, type checking is successful if the input type is \textbf{$Pi \: y \: v_A \: t^{\rho}$} and
 
 \subsubsection{$inferExpr$}
 
@@ -405,9 +407,9 @@ If $v_1$ does not equal to $v_2$, an error occurs. Unless an error occurs, it re
 
 \subsection{Type Checking of Data Types}
 
-In this section I describe how data type declarations are type checked.
+In this section I describe how data type declarations are type checked. See \emph{$checkDataType.hs$}.
 
-A data type $D$, parameterized by parameters $p_1 \dots p_n$, indexed over $\Theta$, inductively defined by the constructors $c_1 \dots c_n$ with the given types, is declared as follows:
+A data type $\boldsymbol{D}$, parameterized by parameters $\boldsymbol{p_1 \dots p_n}$, indexed over $\boldsymbol{\Theta}$, inductively defined by the constructors $\boldsymbol{c_1 \dots c_n}$ with the given types, is declared as follows:
 
 \begin{equation*}
   \begin{aligned}
@@ -418,23 +420,22 @@ A data type $D$, parameterized by parameters $p_1 \dots p_n$, indexed over $\The
   \end{aligned}
 \end{equation*}
 
-The parameters and their types, $(p_1:P_1) \dots (p_n:P_n)$, are stored in a \textit{telescope}, $\tau$:
+$D$'s constructor $c_i$ takes arguments ($\Delta_i$) and has the return type of $D \: p_1 \dots p_n \: t_1^i \dots t_m^i$ where $t_1^i \dots t_m^i \in \Theta$, the arguments of the index of $D$.
+
+The parameters and their types, $(p_1:P_1) \dots (p_n:P_n)$, are stored in a \emph{telescope}, $\boldsymbol{\tau}$:
 \begin{equation*}
   \tau = (p_1:P_1) \dots (p_n:P_n)  
 \end{equation*}
 
 
-For a data type to type checked, the following must hold:
+For a data type to type-checked, the following conditions must hold. The functions in brackets are the respective functions checking the conditions:
 
-\begin{itemize}
-  \item A data type family $D$ has type $\star$.
-  \item Its constructor $c_i$ has type $D \: p_1 \dots p_n \: t_1^i \dots t_m^i$ where $t_1^i \dots t_m^i \in \Theta$.
-  \item The constructor arguments (in $\Delta_i$) need to be of type $\star$.
-  \item The declaration must have the form such that the parameters in the result type of every constructor exactly match those of the telescope $\tau$.
-\end{itemize}
-
-
-each of its constructor has to type check.
+\begin{enumerate}
+  \item A data type family $D$ has type $\star$. ($\boldsymbol{checkDataType}$).
+  \item The constructor arguments (in $\Delta_i$) have type $\star$. ($\boldsymbol{checkConType}$)
+  \item The declaration must have the form such that the parameters in the result type of every constructor exactly match those of the telescope $\tau$. ($\boldsymbol{checkTarget}$)
+  \item All constructors are type-checked. ($\boldsymbol{typeCheckConstructor}$)
+\end{enumerate}
 
 \subsection{Type Checking of Functions}
 

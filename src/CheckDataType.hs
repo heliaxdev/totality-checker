@@ -78,7 +78,7 @@ checkTarget name tel tg@(App (Def n) al) =
     then do
       let pn = length tel
           params = take pn al
-      checkPs tel params -- check parameters
+      checkParams tel params -- check parameters
     else error $
          "checkTarget: target mismatch " <> show tg <> ". Input name is " <>
          show name <>
@@ -99,18 +99,18 @@ checkTarget name tel tg =
   show tel
 
 -- check parameters
-checkPs :: Telescope -> [Expr] -> TypeCheck ()
-checkPs [] [] = return ()
-checkPs tel@((n, _t):tl) (Var n':el) =
+checkParams :: Telescope -> [Expr] -> TypeCheck ()
+checkParams [] [] = return ()
+checkParams tel@((n, _t):tl) (Var n':el) =
   if n == n'
-    then checkPs tl el
+    then checkParams tl el
     else error $
-         "checkPs: target parameter mismatch. The input telescope is " <>
+         "checkParams: target parameter mismatch. The input telescope is " <>
          show tel <>
          ". One of the name in the telescope is " <>
          show n <> -- using show to wrap n with "
          ", which does not match the input expression's variable name: " <>
          show n'
-checkPs _ _ =
+checkParams _ _ =
   error
-    "checkPs: target parameter mismatch. The input expression isn't a variable (Var)."
+    "checkParams: target parameter mismatch. The input expression isn't a variable (Var)."
