@@ -441,7 +441,7 @@ In $\boldsymbol{typeCheckConstructor}$, one of the step is the function $\boldsy
 
 \subsection{Type Checking of Functions}
 
-In this section I describe how function declarations are type checked. See \emph{$checkFunction.hs$}.
+In this section I describe how function declarations are type checked. See \emph{$checkFunction.hs$} and \emph{$Pattern.hs$}.
 
 Recall that a function $f$ has one or more clauses, each clause contains pattern(s) $p$ and the right hand side $e$:
 
@@ -458,16 +458,29 @@ Recall that a function $f$ has one or more clauses, each clause contains pattern
 
 To type-check a function, we type-check all its clauses. 
 
-To type-check a clause, we first type-check all its patterns, yielding an environment for the free variables in the right hand side $e$. After that, we check the right hand side.
+To type-check a clause, we first type-check all its patterns (in $Pattern.hs$), yielding an environment for the free variables in the right hand side $e$. After that, we check the right hand side.
 
 \subsubsection{Type Checking of Patterns}
 \label{sec:typeCheckPattern}
 
-We check the patterns in two phases. In the first phase, we skip \emph{inaccessible} patterns, and only check the accessible part of the patterns. 
+Recall that a pattern is either a \emph{variable} pattern, a \emph{constructor} pattern, or an \emph{inaccessible} pattern. We type-check the patterns in two phases. In the first phase, we skip \emph{inaccessible} patterns, and only check the accessible part of the patterns, i.e., the variable and the constructor patterns. 
 
-The inaccessible patterns are represented by fresh \emph{flexible} generic values. These flexible generic values are instantiated to concrete values when checking constructor patterns. 
+The variable and inaccessible patterns are represented by fresh \emph{flexible} generic values. These flexible generic values are instantiated to concrete values when checking constructor patterns. 
 
 In the second phase, we verify that the expressions of the inaccessible patterns equal to those instantiated in the first phase.
+
+\textbf{The first phase} comprises of the following steps:
+
+\begin{enumerate}
+  \item Convert patterns to values. Variable patterns and inaccessible patterns are converted to \emph{flexible generic values}.
+  \item Instantiate the flexible generic values from step one to values by \emph{unification}.
+  \item Check the patterns, in short:
+        \begin{itemize}
+          \item variable patterns: instantiate the variable to a generic value and add it to the environments.
+          \item constructor patterns: instantiate the constructor pattern to values by unification.
+          \item inaccessible patterns: instantiate the inaccessible pattern to a generic value and move on to the next generic value.
+        \end{itemize}
+\end{enumerate}
 
 \section{Strict Positivity Checks}
 \label{sec:spos}
