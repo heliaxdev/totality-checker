@@ -140,24 +140,29 @@ substEnv sub ((x, v):env) = do
   env' <- substEnv sub env
   return $ (x, v') : env'
 
+-- convert a pattern to a value (for type checking later)
 patternToVal :: Int -> Pattern -> Value
 patternToVal k p = fst (p2v k p)
 
 -- turn a pattern into (value, k)
--- dot patterns get variables corresponding to their flexible generic value
 p2v :: Int -> Pattern -> (Value, Int)
 p2v k p =
   case p of
-    VarP _p -> (VGen k, k + 1)
+    VarP _p -> (VGen k, k + 1) -- var patterns are converted to flex k's.
+    -- con patterns with an empty list of patterns are just Con.
     ConP n [] -> (VCon n, k)
+    -- con patterns with pattern list pl are app of Con to the patterns.
     ConP n pl ->
       let (vl, k') = ps2vs k pl
        in (VApp (VCon n) vl, k')
     SuccP _p ->
       let (v, k') = p2v k p
        in (VSucc v, k')
+    -- dot patterns are converted to flex k's.
     DotP _e -> (VGen k, k + 1)
 
+-- turn a list of patterns to a list of values.
+-- used in turning constructor patterns to values.
 ps2vs :: Int -> [Pattern] -> ([Value], Int)
 ps2vs k [] = ([], k)
 ps2vs k (p:pl) =

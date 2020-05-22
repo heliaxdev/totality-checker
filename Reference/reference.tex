@@ -469,18 +469,44 @@ The variable and inaccessible patterns are represented by fresh \emph{flexible} 
 
 In the second phase, we verify that the expressions of the inaccessible patterns equal to those instantiated in the first phase.
 
-\textbf{The first phase} comprises of the following steps:
+\textbf{The first phase}, done by the function $\boldsymbol{checkPattern}$, comprises of the following functions:
 
 \begin{enumerate}
-  \item Convert patterns to values. Variable patterns and inaccessible patterns are converted to \emph{flexible generic values}.
-  \item Instantiate the flexible generic values from step one to values by \emph{unification}.
-  \item Check the patterns, in short:
-        \begin{itemize}
-          \item variable patterns: instantiate the variable to a generic value and add it to the environments.
-          \item constructor patterns: instantiate the constructor pattern to values by unification.
-          \item inaccessible patterns: instantiate the inaccessible pattern to a generic value and move on to the next generic value.
-        \end{itemize}
+  \item $\boldsymbol{patternToVal}$: Convert patterns to values. Variable patterns and inaccessible patterns are converted to \emph{flexible generic values}.
+  \item $\boldsymbol{inst}$: Instantiate the flexible generic values (from step one) to values by \emph{unification}.
 \end{enumerate}
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      patternToVal \: k \: p             & = & v \textrm{ where } p2v \: k \: p = (v,k')                           \\
+      \textrm{ and }                     &   &                                                                     \\
+      p2v \: k \: x                      & = & (k,k+1)                                                             \\
+      p2v \: k \: (c \: ())              & = & (c,k)                                                               \\
+      p2v \: k \: (c \: (p_1 \dots p_n)) & = & (c \: (v_1 \dots v_n),k')                                           \\ 
+                                         &   & \textrm{ where } (v_1 \dots v_n,k') = ps2vs \: k \: (p_1 \dots p_n) \\
+      p2v \: k \: \underline{e}          & = & (k,k+1)                                                             \\
+      \textrm{ and }                     &   &                                                                     \\
+      ps2vs \: k \: ()                   & = & ((),k)                                                              \\
+      ps2vs \: k \: (p_1 \dots p_n)      & = & (k'',(v_1,v_2,\dots,v_n))                                           \\
+                                         &   & \textrm{ where } (v_1,k') = p2v \: k \: p \: \land                  \\
+                                         &   & (v_2 \dots v_n,k'') = ps2vs \: k' \: (p_2 \dots p_n)                \\ 
+    \end{aligned}
+  \end{equation*}
+  \caption{Converting Patterns to Values}
+\end{figure}
+
+For variable patterns ($x$) and inaccessible patterns (\underline{$e$}), they are converted to flexible generic values in $\boldsymbol{patternToVal}$. 
+
+$\boldsymbol{inst}$ is the function that instantiates these to values. That is, $inst$ returns a mapping of generic values to values, which is called a \emph{substitution}. 
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+    \end{aligned}
+  \end{equation*}
+  \caption{Substitution: Instantiation of Flexible Values by Unification}
+\end{figure}
 
 \section{Strict Positivity Checks}
 \label{sec:spos}
