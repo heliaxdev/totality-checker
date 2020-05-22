@@ -64,7 +64,7 @@ inst :: Int -> [Int] -> Value -> Value -> TypeCheck Substitution
 inst m flex v1 v2 =
   case (v1, v2) of
     (VGen k, _)
-      | k `elem` flex -- if k is a flexible generic value (dot pattern)
+      | k `elem` flex -- if k is a dot pattern
        -> do
         noc <- nonOccur m v1 v2 -- check for non-occurence
         if noc -- if v1 is not in v2

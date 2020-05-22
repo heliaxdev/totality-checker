@@ -463,7 +463,9 @@ To type-check a clause, we first type-check all its patterns (in $Pattern.hs$), 
 \subsubsection{Type Checking of Patterns}
 \label{sec:typeCheckPattern}
 
-Recall that a pattern is either a \emph{variable} pattern, a \emph{constructor} pattern, or an \emph{inaccessible} pattern. We type-check the patterns in two phases. In the first phase, we skip \emph{inaccessible} patterns, and only check the accessible part of the patterns, i.e., the variable and the constructor patterns. 
+Recall that a pattern is either a \emph{variable} pattern, a \emph{constructor} pattern, or an \emph{inaccessible} pattern. A constructor pattern is parameterized by a \emph{name} and a \emph{list of patterns}. Therefore, a constructor pattern may have variable or inaccessible patterns in the list of patterns in its parameter. 
+
+We type-check the patterns in two phases. In the first phase, we skip \emph{inaccessible} patterns, and only check the accessible part of the patterns, i.e., the variable and the constructor patterns. 
 
 The variable and inaccessible patterns are represented by fresh \emph{flexible} generic values. These flexible generic values are instantiated to concrete values when checking constructor patterns. 
 
@@ -473,7 +475,7 @@ In the second phase, we verify that the expressions of the inaccessible patterns
 
 \begin{enumerate}
   \item $\boldsymbol{patternToVal}$: Convert patterns to values. Variable patterns and inaccessible patterns are converted to \emph{flexible generic values}.
-  \item $\boldsymbol{inst}$: Instantiate the flexible generic values (from step one) to values by \emph{unification}.
+  \item $\boldsymbol{inst}$: Instantiate the flexible generic values of constructor patterns (from step one) to values by \emph{unification}.
 \end{enumerate}
 
 \begin{figure}[H]
@@ -496,9 +498,11 @@ In the second phase, we verify that the expressions of the inaccessible patterns
   \caption{Converting Patterns to Values}
 \end{figure}
 
-For variable patterns ($x$) and inaccessible patterns (\underline{$e$}), they are converted to flexible generic values in $\boldsymbol{patternToVal}$. 
+For variable patterns ($x$) and inaccessible patterns (\underline{$e$}), they are converted to flexible generic values in $\boldsymbol{patternToVal}$. The parameter of a constructor pattern may include these patterns that are converted to flexible generic values. In $\boldsymbol{patternToVal}$, a constructor pattern with a non-empty list of patterns as its parameter is converted to an application of these values. 
 
-$\boldsymbol{inst}$ is the function that instantiates these to values. That is, $inst$ returns a mapping of generic values to values, which is called a \emph{substitution}. 
+$\boldsymbol{inst}$ is the function that instantiates these flexible generic values to values. That is, $inst$ returns a mapping of generic values to values, which is called a \emph{substitution}. 
+
+$\boldsymbol{inst}$ uses $\boldsymbol{substVal}$, $\boldsymbol{substEnv}$, and $\boldsymbol{compSubst}$. %TODO describe and explain each of these functions.
 
 \begin{figure}[H]
   \begin{equation*}
