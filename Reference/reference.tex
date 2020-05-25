@@ -524,7 +524,7 @@ To type-check a clause, we first type-check all its patterns (in $Pattern.hs$), 
 \subsubsection{Type Checking of Patterns}
 \label{sec:typeCheckPattern}
 
-Recall that a pattern is either a \emph{variable} pattern, a \emph{constructor} pattern, or an \emph{inaccessible} pattern. A constructor pattern is parameterised by a \emph{name} and a \emph{list of patterns}. Therefore, a constructor pattern may have variable or inaccessible patterns in the list of patterns in its parameter. 
+Recall that a pattern is either a \emph{variable} pattern, a \emph{constructor} pattern, or an \emph{inaccessible} pattern. A constructor pattern is parameterised by a \emph{name} and a \emph{list of patterns}. Therefore, a constructor pattern may have variable or inaccessible patterns as its parameter. 
 
 We type-check the patterns in two phases. In the first phase, we skip \emph{inaccessible} patterns, and only check the accessible part of the patterns, i.e., the variable and the constructor patterns. 
 
@@ -532,11 +532,11 @@ The variable and inaccessible patterns are represented by fresh \emph{flexible} 
 
 In the second phase, we verify that the expressions of the inaccessible patterns equal to those instantiated in the first phase.
 
-\textbf{The first phase}, done by the function $\boldsymbol{checkPattern}$, comprises of the following functions:
+\textbf{The first phase}, done by the function $\boldsymbol{checkPattern}$, calls the following functions:
 
 \begin{enumerate}
   \item $\boldsymbol{patternToVal}$: Convert patterns to values. Variable patterns and inaccessible patterns are converted to \emph{flexible generic values}.
-  \item $\boldsymbol{inst}$: Instantiate the flexible generic values of constructor patterns (from step one) to values by \emph{unification}.
+  \item $\boldsymbol{inst}$: Instantiate the flexible generic values (from step one) of constructor patterns to values by \emph{unification}.
 \end{enumerate}
 
 \begin{figure}[H]
