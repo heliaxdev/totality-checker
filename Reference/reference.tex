@@ -44,7 +44,7 @@ implemented in Haskell. The totality checker checks:
 \begin{enumerate}
   \item strict positivity of constructors
   \item pattern matching coverage
-  \item termination
+  \item term termination
 \end{enumerate}
 
 To support these checks, the type checker has to support data type (hence the
@@ -112,7 +112,7 @@ Because of dependent types, computation is required during type-checking. An
 expression $e$ in an environment $\rho$ is \emph{evaluated} during type-checking to a type or a \emph{value} $v$.
 
 Environments provide bindings for the free variables occurring in the
-corresponding $e$. Thus, an environment $\rho$ is a list of pairs of variable and its type. Values of abstractions, dependent functions, and applications contain \emph{closures}. A closure $\boldsymbol{e^{\rho}}$ is a pair of an expression $e$ and an
+corresponding $e$. Thus, an environment $\rho$ is a list of pairs of variable and its type. Values of abstractions, and dependent functions contain \emph{closures}. A closure $\boldsymbol{e^{\rho}}$ is a pair of an expression $e$ and an
 \emph{environment} $\boldsymbol{\rho}$.
 
 \begin{figure}[H]
@@ -130,9 +130,9 @@ corresponding $e$. Thus, an environment $\rho$ is a list of pairs of variable an
 \end{figure}
 
 $v \: (v_1 \dots v_n)$, $Lam \: x \: e^{\rho}$, and $Pi \: x \: v \: e^{\rho}$
-can be evaluated further (see below) while $k$, $\star$, $c$, $f$, and $D$ are \emph{atomic values}
+can be evaluated further (see section \ref{sec:eval}) while $k$, $\star$, $c$, $f$, and $D$ are \emph{atomic values}
 which cannot be evaluated further. A generic value $k$ represents the value of a variable during type
-checking. $k \in$ integer, starts from 1. It is also used to collect inaccessible patterns during type checking. More below. 
+checking. $k$ is an integer. It is also used to collect inaccessible patterns during type checking (see section \ref{sec:typeCheckPattern}). 
 
 \subsection{Signature}
 A signature $\Sigma$ carries information about all declared constants (constructors, data types, and functions). Each declaration adds newly defined constants to the signature, which is empty at the beginning. Each declaration that is added to the signature is a mapping of the constant to its information, including the evaluated value (type) of the constant. Specifically, a mapping in the signature maps:
@@ -159,9 +159,10 @@ A signature $\Sigma$ carries information about all declared constants (construct
   \caption{Mapping types in a Signature}
 \end{figure}
 
-The signature is in a \emph{state} monad so that we can retrieve the signature during type and totality checking. The mapping of a constant may be added before the constant is type-checked. For a function constant, the mapping contains the information about whether the clauses have been type-checked or not.
+The signature is in a \emph{state} monad so that we can retrieve the signature during type and totality checking. The mapping of a constant may be added before the constant is type-checked. For a function constant, the mapping contains the information about whether the clauses have been type-checked.
 
 \subsection{Evaluations}
+\label{sec:eval}
 
 The $eval$ function evaluates an expression $e$ in environment $\rho$ to a
 $value$ as follows (see $Evaluator.hs$):
@@ -252,7 +253,7 @@ When the pattern is a \textbf{constructor}, it returns the input environment if 
   \caption{Pattern Matching}
 \end{figure}
 
-Pattern matching can fail and no environment is returned in such case. $match$ is used in $match_{clause}$, which evaluates and returns the type of the right hand side expression of a given clause.
+Pattern matching can fail and no environment is returned in such case. $match$ is called by $match_{clause}$, which evaluates and returns the type of the right hand side expression of a given clause.
 
 The function $match_{clause}$ takes in four arguments:
 
@@ -316,11 +317,11 @@ We use the bidirectional type checking technique. The type-checker has two modes
   \item $inferExpr$ infers the type of the input expression.
 \end{enumerate}
 
-$checkExpr$ uses $inferExpr$ as needed to infer the type of the input expression and check that it is \emph{equal} to the input type. $eqVal$ defines the equality of two values.
+$checkExpr$ calls $inferExpr$ as needed to infer the type of the input expression and check that it is \emph{equal} to the input type. $eqVal$ defines the equality of two values.
 
 $checkExpr$, $inferExpr$, and $eqVal$ are simultanously defined in the next sections. They all return a state transformer monad $StateT \: Signature \: IO \: a$. The state is the signature, which contains information for type checking of data type/function declarations. The inner monad is the $IO$ monad. 
 
-$a$ is $unit$ for $checkExpr$ and $eqVal$. If no error occurs, each step of the $IO$ returns $()$. $a$ is $value$ for $inferExpr$, because $inferExpr$ returns the type of the input expression.
+$a$ is $unit$ for $checkExpr$ and $eqVal$. If no error occurs, each step of the $IO$ returns $\boldsymbol{()}$. $a$ is $value$ for $inferExpr$, because $inferExpr$ returns the type of the input expression.
 
 \subsubsection{$checkExpr$}
 \label{sec:checkExpr}
@@ -328,14 +329,14 @@ $a$ is $unit$ for $checkExpr$ and $eqVal$. If no error occurs, each step of the 
 $checkExpr$ takes 5 arguments:
 
 \begin{enumerate}
-  \item $k$, the subjected generic value.
+  \item $k$, the next generic value.
   \item environment $\rho$, which is a list of pairs of $n$ (variable name) and $k$ that binds a fresh generic value to a variable.
-  \item environment $\Gamma$, which is a list of pairs of $n$ and $v$ that binds the type value to a variable.
+  \item environment $\Gamma$, which is a list of pairs of $n$ and $v$ that binds the type to a variable.
   \item expression $e$, the expression being checked.
   \item value $v$, the supposed type of the expression.
 \end{enumerate}
 
-If the expression does not have a type equal $v$, an error occurs. Unless an error occurs, it returns a $unit$.
+If the expression is not of type $v$, an error occurs. Unless an error occurs, it returns a $unit$.
 
 \begin{figure}[H]
   \begin{equation*}
@@ -409,7 +410,7 @@ If $v_1$ does not equal to $v_2$, an error occurs. Unless an error occurs, it re
 
 In this section I describe how data type declarations are type checked. See \emph{$checkDataType.hs$}.
 
-A data type $\boldsymbol{D}$, parameterized by parameters $\boldsymbol{p_1 \dots p_n}$, indexed over $\boldsymbol{\Theta}$, inductively defined by the constructors $\boldsymbol{c_1 \dots c_n}$ with the given types, is declared as follows:
+A data type $\boldsymbol{D}$, parameterised by parameters $\boldsymbol{p_1 \dots p_n}$, indexed over $\boldsymbol{\Theta}$, inductively defined by the constructors $\boldsymbol{c_1 \dots c_n}$ with the given types, is declared as follows:
 
 \begin{equation*}
   \begin{aligned}
@@ -427,17 +428,77 @@ The parameters and their types, $(p_1:P_1) \dots (p_n:P_n)$, are stored in a \em
   \tau = (p_1:P_1) \dots (p_n:P_n)  
 \end{equation*}
 
-
 For a data type to type-checked, the following conditions must hold. The functions in brackets are the respective functions checking the conditions:
 
 \begin{enumerate}
   \item A data type family $D$ has type $\star$. ($\boldsymbol{checkDataType}$).
-  \item The constructor arguments (in $\Delta_i$) have type $\star$. ($\boldsymbol{checkConType}$)
-  \item The declaration must have the form such that the parameters in the result type of every constructor exactly match those of the telescope $\tau$. ($\boldsymbol{checkTarget}$)
-  \item All constructors are type-checked. ($\boldsymbol{typeCheckConstructor}$)
+  \item All constructors are type-checked ($\boldsymbol{typeCheckConstructor}$), which calls the following functions:
+        \begin{itemize}
+          \item  $\boldsymbol{checkConType}$: Checks that the constructor arguments (in $\Delta_i$) have type $\star$, and the type of the constructor is of type $\star$ (the same type as the data type).
+          \item  $\boldsymbol{checkTarget}$: Checks that the parameters in the result type of every constructor exactly match those of the telescope $\tau$.
+        \end{itemize}
 \end{enumerate}
+In $\boldsymbol{typeCheckConstructor}$, one of the step is the function $\boldsymbol{sposConstructor}$, which checks that the constructors are strictly positive. I describe the details of the mechanism of this check in section \ref{sec:spos}.
 
-In $\boldsymbol{typeCheckConstructor}$, one of the step is the function $\boldsymbol{sposConstructor}$, which checks that the constructors are strictly positive. I describe the details of the mechanism of this check in section \ref{sec:spos}. 
+I provide the data types of $\boldsymbol{Nat}$, $\boldsymbol{List}$, and $\boldsymbol{Vec}$ as examples below:
+
+\textbf{The data type of \emph{natural numbers}} can be introduced by:
+
+\begin{equation*}
+  \begin{aligned}
+    data &       & Nat : \star \\
+         & zero: & Nat         \\
+         & suc:  & Nat \to Nat \\
+  \end{aligned}
+\end{equation*}
+
+$Nat$ is a data type of type $\star$. It has no parameter (there is no $p$). It is not indexed ($\Theta$ is empty).
+
+Its telescope $\tau$ is empty.
+
+$zero$ is a constructor ($c_1$) of $Nat$. It doesn't take any argument ($\Delta_1$ is empty). Its type is $Nat$. 
+
+$suc$ is another constructor ($c_2$) of $Nat$. It takes a $Nat$ as an argument ($\Delta_2$ = $Nat$), which is fine because $Nat$ is of type $\star$. Its return type is $Nat$.
+
+\textbf{The data type family of \emph{lists}} is parameterised by $A$, without being indexed:
+
+\begin{equation*}
+  \begin{aligned}
+    data &       & List \: (A:\star) : \star     \\
+         & nil:  & List \: A                     \\
+         & cons: & A \to List \: A \to List \: A \\
+  \end{aligned}
+\end{equation*}
+
+$List$ is a data type of type $\star$. It has one parameter, $p_1 = A$. The type of the parameter is $\star$, i.e., $P_1 = \star$. 
+
+It is not indexed ($\Theta$ is empty).
+
+Its telescope is $\tau = (A:\star)$. 
+
+$nil$ is a constructor ($c_1$) of $List$. It doesn't take any argument ($\Delta_1$ is empty). Its type is $List \: A$.
+
+$cons$ is another constructor ($c_2$) of $List$. It takes two arguments, $\Delta_2 = A, List \: A$. Its return type is $List \: A$.
+
+\textbf{The data type family of \emph{vectors}} is parameterised by $A$, indexed by the length of the list:
+
+\begin{equation*}
+  \begin{aligned}
+    data &        & Vec \: (A:\star) : Nat \to \star                             \\
+         & vnil:  & Vec \: A \: zero                                             \\
+         & vcons: & (n : Nat) \to A \to Vec \: A \: n \to Vec \: A \: (suc \: n) \\
+  \end{aligned}
+\end{equation*}
+
+$Vec$ is a data type of type $\star$. It has one parameter, $p_1 = A$. The type of the parameter is $\star$, i.e., $P_1 = \star$.
+
+it is indexed by a $Nat$, i.e., $\Theta = Nat$.
+
+Its telescope is $\tau = (A : \star)$.
+
+$vnil$ is a constructor ($c_1$) of $Vec$. It doesn't take any argument ($\Delta_1$ is empty). Its type is $Vec \: A \: zero$, i.e., $t_1^1 = zero$.
+
+$vcons$ is another constructor ($c_2$) of $Vec$. It takes 3 arguments, $\Delta_2 = (n:Nat), A, Vec \: A \: n$. Its return type is $Vec \: A \: (suc \: n)$, i.e., $t^2_1 = suc \: n$. 
 
 \subsection{Type Checking of Functions}
 
@@ -463,7 +524,7 @@ To type-check a clause, we first type-check all its patterns (in $Pattern.hs$), 
 \subsubsection{Type Checking of Patterns}
 \label{sec:typeCheckPattern}
 
-Recall that a pattern is either a \emph{variable} pattern, a \emph{constructor} pattern, or an \emph{inaccessible} pattern. A constructor pattern is parameterized by a \emph{name} and a \emph{list of patterns}. Therefore, a constructor pattern may have variable or inaccessible patterns in the list of patterns in its parameter. 
+Recall that a pattern is either a \emph{variable} pattern, a \emph{constructor} pattern, or an \emph{inaccessible} pattern. A constructor pattern is parameterised by a \emph{name} and a \emph{list of patterns}. Therefore, a constructor pattern may have variable or inaccessible patterns in the list of patterns in its parameter. 
 
 We type-check the patterns in two phases. In the first phase, we skip \emph{inaccessible} patterns, and only check the accessible part of the patterns, i.e., the variable and the constructor patterns. 
 
@@ -498,11 +559,11 @@ In the second phase, we verify that the expressions of the inaccessible patterns
   \caption{Converting Patterns to Values}
 \end{figure}
 
-For variable patterns ($x$) and inaccessible patterns (\underline{$e$}), they are converted to flexible generic values in $\boldsymbol{patternToVal}$. The parameter of a constructor pattern may include these patterns that are converted to flexible generic values. In $\boldsymbol{patternToVal}$, a constructor pattern with a non-empty list of patterns as its parameter is converted to an application of these values. 
+For variable patterns ($x$) and inaccessible patterns (\underline{$e$}), they are converted to flexible generic values in $\boldsymbol{patternToVal}$. The parameter of a constructor pattern may include these patterns that are converted to flexible generic values. In $\boldsymbol{patternToVal}$, a constructor pattern with a non-empty list of patterns as its parameter is converted to an application of these values.
 
-$\boldsymbol{inst}$ is the function that instantiates these flexible generic values to values. That is, $inst$ returns a mapping of generic values to values, which is called a \emph{substitution}. 
+$\boldsymbol{inst}$ is the function that instantiates these flexible generic values to values. That is, $inst$ returns a mapping of generic values to values, which is called a \emph{substitution}.
 
-$\boldsymbol{inst}$ uses $\boldsymbol{substVal}$, $\boldsymbol{substEnv}$, and $\boldsymbol{compSubst}$. %TODO describe and explain each of these functions.
+$\boldsymbol{inst}$ calls $\boldsymbol{substVal}$, $\boldsymbol{substEnv}$, and $\boldsymbol{compSubst}$. %TODO describe and explain each of these functions.
 
 \begin{figure}[H]
   \begin{equation*}

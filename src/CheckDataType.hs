@@ -34,33 +34,38 @@ typeToTele t = ttt t []
     ttt (Pi n t' t2) tel = ttt t2 (tel <> [(n, t')])
     ttt x tel            = (tel, x)
 
--- check data type
--- check that params are types
--- check that arguments are Star types
--- check that target is of type Star
+-- | checkDataType takes 5 arguments.
+-- 1st argument is the next fresh generic value.
+-- 2nd argument is an env that binds fresh generic values to variables.
+-- 3rd argument is an env that binds the type value corresponding to these generic values.
+-- 4th argument is the length of the telescope, or the no. of parameters.
+-- 5th argument is the expression that is left to be checked.
 checkDataType :: Int -> Env -> Env -> Int -> Expr -> TypeCheck ()
 checkDataType k rho gamma p (Pi x t1 t2) = do
   _ <-
-    if k < p
-      then checkType k rho gamma t1 -- params are valid types
-      else checkSType k rho gamma t1 -- arguments are Star types
+    if k < p -- if k < p then we're checking the parameters
+      then checkType k rho gamma t1 -- checks params are valid types
+      else checkSType k rho gamma t1 -- checks arguments Θ are Star types
   v_t1 <- eval rho t1
   checkDataType (k + 1) (updateEnv rho x (VGen k)) (updateEnv gamma x v_t1) p t2
+-- check that the data type is of type Star
 checkDataType _k _rho _gamma _p Star = return ()
 checkDataType _k _rho _gamma _p e =
   error $ "checkDataType: " <> show e <> "doesn't target Star."
 
--- check constructor type
--- check that arguments are stypes
--- check that result is a star
---  ( params were already checked by checkDataType )
+-- | checkConType check constructor type
+-- 1st argument is the next fresh generic value.
+-- 2nd argument is an env that binds fresh generic values to variables.
+-- 3rd argument is an env that binds the type value corresponding to these generic values.
+-- 4th argument is the length of the telescope, or the no. of parameters.
+-- 5th argument is the expression that is left to be checked.
 checkConType :: Int -> Env -> Env -> Int -> Expr -> TypeCheck ()
 checkConType k rho gamma p e =
   case e of
     Pi x t1 t2 -> do
       if k < p
-        then return ()
-        else checkSType k rho gamma t1
+        then return () -- params were already checked by checkDataType
+        else checkSType k rho gamma t1 -- check that arguments ∆ are stypes
       v_t1 <- eval rho t1
       checkConType
         (k + 1)
@@ -68,7 +73,7 @@ checkConType k rho gamma p e =
         (updateEnv gamma x v_t1)
         p
         t2
-    _ -> checkExpr k rho gamma e VStar
+    _ -> checkExpr k rho gamma e VStar -- the constructor's type is of type Star(the same type as the data type).
 
 -- check that the data type and the parameter arguments
 -- are written down like declared in telescope

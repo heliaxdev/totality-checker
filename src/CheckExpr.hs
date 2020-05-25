@@ -7,9 +7,9 @@ import           Prelude
 import           Types
 
 -- checks that input Expr has the type v (second input)
--- k is the subjected generic value
+-- k is the next generic value
 -- env rho binds fresh generic values to variables
--- env gamma binds the type value corresponding to these generic values
+-- env gamma binds the type corresponding to these generic values
 checkExpr :: Int -> Env -> Env -> Expr -> Value -> TypeCheck ()
 checkExpr k rho gamma (Lam n e1) (VPi x va env t1) = do
   v_t1 <- eval (updateEnv env x (VGen k)) t1
@@ -23,7 +23,7 @@ checkExpr k rho gamma e v = do
   ev <- inferExpr k rho gamma e
   eqVal 0 ev v -- TODO: subtyping? (leqVal)
 
--- checks that input Expr is correct and infers its type value v
+-- checks that input Expr is correct and infers its type v
 inferExpr :: Int -> Env -> Env -> Expr -> TypeCheck Value
 inferExpr _k _rho gamma (Var x) = return $ lookupEnv gamma x
 inferExpr k rho gamma (App e1 e2) =
