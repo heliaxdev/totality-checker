@@ -319,7 +319,9 @@ We use the bidirectional type checking technique. The type-checker has two modes
 
 $checkExpr$ calls $inferExpr$ as needed to infer the type of the input expression and check that it is \emph{equal} to the input type. $eqVal$ defines the equality of two values.
 
-$checkExpr$, $inferExpr$, and $eqVal$ are simultanously defined in the next sections. They all return a state transformer monad $StateT \: Signature \: IO \: a$. The state is the signature, which contains information for type checking of data type/function declarations. The inner monad is the $IO$ monad. 
+$checkExpr$, $inferExpr$, and $eqVal$ are simultanously defined in the next sections. 
+
+All type checking functions return a state transformer monad $StateT \: Signature \: IO \: a$. The state is the signature, which contains information for type checking of data type/function declarations. The inner monad is the $IO$ monad. 
 
 $a$ is $unit$ for $checkExpr$ and $eqVal$. If no error occurs, each step of the $IO$ returns $\boldsymbol{()}$. $a$ is $value$ for $inferExpr$, because $inferExpr$ returns the type of the input expression.
 
@@ -428,19 +430,8 @@ The parameters and their types, $(p_1:P_1) \dots (p_n:P_n)$, are stored in a \em
   \tau = (p_1:P_1) \dots (p_n:P_n)  
 \end{equation*}
 
-For a data type to type-checked, the following conditions must hold. The functions in brackets are the respective functions checking the conditions:
 
-\begin{enumerate}
-  \item A data type family $D$ has type $\star$. ($\boldsymbol{checkDataType}$).
-  \item All constructors are type-checked ($\boldsymbol{typeCheckConstructor}$), which calls the following functions:
-        \begin{itemize}
-          \item  $\boldsymbol{checkConType}$: Checks that the constructor arguments (in $\Delta_i$) have type $\star$, and the type of the constructor is of type $\star$ (the same type as the data type).
-          \item  $\boldsymbol{checkTarget}$: Checks that the parameters in the result type of every constructor exactly match those of the telescope $\tau$.
-        \end{itemize}
-\end{enumerate}
-In $\boldsymbol{typeCheckConstructor}$, one of the step is the function $\boldsymbol{sposConstructor}$, which checks that the constructors are strictly positive. I describe the details of the mechanism of this check in section \ref{sec:spos}.
-
-I provide the data types of $\boldsymbol{Nat}$, $\boldsymbol{List}$, and $\boldsymbol{Vec}$ as examples below:
+For example, the data types of $\boldsymbol{Nat}$, $\boldsymbol{List}$, and $\boldsymbol{Vec}$:
 
 \textbf{The data type of \emph{natural numbers}} can be introduced by:
 
@@ -484,21 +475,79 @@ $cons$ is another constructor ($c_2$) of $List$. It takes two arguments, $\Delta
 
 \begin{equation*}
   \begin{aligned}
-    data &        & Vec \: (A:\star) : Nat \to \star                             \\
-         & vnil:  & Vec \: A \: zero                                             \\
-         & vcons: & (n : Nat) \to A \to Vec \: A \: n \to Vec \: A \: (suc \: n) \\
+    data &        & Vec \: (A:\star) : Nat \to \star               \\
+         & vnil:  & Vec \: A \: zero                               \\
+         & vcons: & A \to Vec \: A \: n \to Vec \: A \: (suc \: n) \\
   \end{aligned}
 \end{equation*}
 
 $Vec$ is a data type of type $\star$. It has one parameter, $p_1 = A$. The type of the parameter is $\star$, i.e., $P_1 = \star$.
 
-it is indexed by a $Nat$, i.e., $\Theta = Nat$.
+It is indexed by a $Nat$, i.e., $\Theta = Nat$.
 
 Its telescope is $\tau = (A : \star)$.
 
 $vnil$ is a constructor ($c_1$) of $Vec$. It doesn't take any argument ($\Delta_1$ is empty). Its type is $Vec \: A \: zero$, i.e., $t_1^1 = zero$.
 
-$vcons$ is another constructor ($c_2$) of $Vec$. It takes 3 arguments, $\Delta_2 = (n:Nat), A, Vec \: A \: n$. Its return type is $Vec \: A \: (suc \: n)$, i.e., $t^2_1 = suc \: n$. 
+$vcons$ is another constructor ($c_2$) of $Vec$. It takes 2 arguments, $\Delta_2 = A, Vec \: A \: n$. Its return type is $Vec \: A \: (suc \: n)$, i.e., $t^2_1 = suc \: n$.
+
+For a data type to be type-checked, the following conditions must hold. The functions in brackets are the respective functions checking the conditions:
+
+\begin{enumerate}
+  \item The data type is type-checked, ($\boldsymbol{checkDataType}$):
+  \item All constructors are type-checked ($\boldsymbol{typeCheckConstructor}$). It's checked by calling the following functions:
+        \begin{itemize}
+          \item  $\boldsymbol{checkConType}$: Checks that the constructor arguments (in $\Delta_i$) have type $\star$, and the type of the constructor is of type $\star$ (the same type as the data type).
+          \item  $\boldsymbol{checkTarget}$: Checks that the parameters in the result type of every constructor exactly match those of the telescope $\tau$.
+        \end{itemize}
+\end{enumerate}
+
+In $\boldsymbol{typeCheckConstructor}$, one of the step is the function $\boldsymbol{sposConstructor}$, which checks that the constructors are strictly positive. I describe the details of the mechanism of this check in section \ref{sec:spos}.
+
+\subsubsection{$checkDataType$}
+
+$checkDataType$ makes sure the data type declaration is valid by checking the following conditions:
+
+\begin{enumerate}
+  \item The parameters have valid types.
+  \item The index arguments $\Theta$ are of type $\star$.
+  \item The data type is of type $\star$.
+\end{enumerate}
+
+(2) and (3) are required to ensure that one cannot declare a data type that infinite loop.
+
+$checkDataType$ takes 5 arguments:
+
+\begin{enumerate}
+  \item $k$, the next generic value.
+  \item environment $\rho$, which is a list of pairs of $n$ (variable name) and $k$ that binds a fresh generic value to a variable.
+  \item environment $\Gamma$, which is a list of pairs of $n$ and $v$ that binds the type to a variable.
+  \item the length of the telescope or the number of parameters.
+  \item expression $e$, the expression being checked.
+\end{enumerate}
+
+Unless an error occurring, $checkDataType$ returns a $unit$.
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      checkDataType \: k \: \rho \: \Gamma \: n \: ((x:A) \to B) & = & 
+      \begin{cases}
+        A \in Type & \text{if } k < n    \\ 
+        A : \star  & \text{if } k \geq n \\                                                                  
+      \end{cases}                                                                                                                                 \land \\
+                                                                 &   & \: checkDataType \: (k+1) \: \rho : (x,k) \: \Gamma : (x, (eval A^{\rho})) \: n \: B            \\                                               
+      checkDataType \: k \: \rho \: \Gamma \: n \: \star         & = & True                                                                                            \\
+    \end{aligned}
+  \end{equation*}
+  \caption{Type-Check Data Type, $checkDataType$}
+\end{figure}
+
+\subsubsection{$typeCheckConstructor$}
+
+$typeCheckConstructor$ calls $checkConType$, which is very similar to $checkDataType$. It takes in the same arguments, but it checks the constructors instead. The pseudocode is ommitted here.
+
+When we type-check a data type declaration (in $TypeChecker.hs$), both $checkDataType$ and $checkConType$ are called starting with $k=0$ and empty environments. They check all expressions.
 
 \subsection{Type Checking of Functions}
 
@@ -561,16 +610,71 @@ In the second phase, we verify that the expressions of the inaccessible patterns
 
 For variable patterns ($x$) and inaccessible patterns (\underline{$e$}), they are converted to flexible generic values in $\boldsymbol{patternToVal}$. The parameter of a constructor pattern may include these patterns that are converted to flexible generic values. In $\boldsymbol{patternToVal}$, a constructor pattern with a non-empty list of patterns as its parameter is converted to an application of these values.
 
-$\boldsymbol{inst}$ is the function that instantiates these flexible generic values to values. That is, $inst$ returns a mapping of generic values to values, which is called a \emph{substitution}.
+$\boldsymbol{inst}$ is the function that instantiates these flexible generic values to values. That is, $inst$ returns a list of mapping of generic values to values, which is called a \emph{substitution} or $\sigma$.
 
-$\boldsymbol{inst}$ calls $\boldsymbol{substVal}$, $\boldsymbol{substEnv}$, and $\boldsymbol{compSubst}$. %TODO describe and explain each of these functions.
+The application of a substitution on values ($\boldsymbol{substVal}$) and environment ($\boldsymbol{substEnv}$) are defined as follows:
 
 \begin{figure}[H]
   \begin{equation*}
     \begin{aligned}
+      substVal \: \sigma \: k                            & = & v \textrm{ if } (k,v) \in \sigma                                                           \\
+      substVal \: \sigma \: (v \: (v_1 \dots v_n))       & = & (substVal \: \sigma \: v) \: (substVal \: \sigma \: v_1) \dots (substVal \: \sigma \: v_n) \\
+      substVal \: \sigma \: (Pi \: x \: v_A \: B^{\rho}) & = & Pi \: x \: v_A \: B^{(substVal \: \sigma \: \rho)}                                         \\
+      substVal \: \sigma \: (Lam \: x \: e^{\rho})       & = & Lam \: x \: e^{(substVal \: \sigma \: \rho)}                                               \\
+      substVal \: \sigma \: v                            & = & v \textrm{ otherwise}                                                                      \\
+      \\
+      substEnv \: \sigma \: ()                           & = & ()                                                                                         \\
+      substEnv \: \sigma \: ((x,v):\rho)                 & = & (x,(substVal \: \sigma \: v)) : (substEnv \: \sigma \: \rho)                               \\
     \end{aligned}
   \end{equation*}
-  \caption{Substitution: Instantiation of Flexible Values by Unification}
+  \caption{Application of a Substitution}
+\end{figure}
+
+$substVal$ returns a value while $substEnv$ returns an environment.
+
+The composition of two substitutions ($\boldsymbol{compSubst}$) merges two substitutions into one, meaning that 
+
+\[
+  compSubst \: \sigma_1 \: (substVal \: \sigma_2 \: v) = substVal \: \sigma_2 \: (substVal \: \sigma_1 \: v).
+\]
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      compSubst \: ((k_1,v_1) \dots (k_n,v_n)) \: \sigma_2 & = & ((k_1, (substVal \: \sigma_2 \: v_1) \dots (k_n,(substVal \: \sigma_2 \: v_n)) \sigma_2) \\
+    \end{aligned}
+  \end{equation*}
+  \caption{Composition of Two Substitutions}
+\end{figure}
+
+Assume that the domains of the substitutions are disjoint and that there are no occurrences of the generic values of $\sigma_1$ in the values of the codomain of $\sigma_2$.
+
+$inst$ also calls the function that checks that an atomic value $a$ does not occur in a value $v$:
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      nonOccur \: k \: a \: v & = & \\
+    \end{aligned}
+  \end{equation*}
+  \caption{Non-occurrence of Atomic Value $a$, $nonOccur$}
+\end{figure}
+
+$inst$ takes 4 arguments:
+
+\begin{enumerate}
+  \item $k$, the next fresh generic value.
+  \item a set of flexible generic values.
+  \item [(3,4)] the values to unify.
+\end{enumerate}
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      inst \: k \: [dot_1,\dots,dot_n] \: v_1 \: v_2 & = & \\
+    \end{aligned}
+  \end{equation*}
+  \caption{Instantiation of Flexible Values by Unification, $inst$}
 \end{figure}
 
 \section{Strict Positivity Checks}

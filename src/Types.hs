@@ -6,8 +6,8 @@ import qualified Data.Map            as Map
 data Expr
   = Star -- universe of small types
   | Var Name -- variable
-  | Con Name -- constructor name
-  | Def Name -- function/data type name
+  | Con Name -- constructor
+  | Def Name -- function/data type
   | Lam Name Expr -- abstraction
   | Pi Name Expr Expr -- (PI) dependent function space
   | App Expr [Expr] -- application
@@ -66,7 +66,7 @@ showEnv' :: Env -> String
 showEnv' [] = []
 showEnv' ((n, v):env) = "(" <> show n <> " = " <> show v <> ")" <> showEnv' env
 
--- An environment (ρ) maps variables to their types.
+-- An environment (ρ) maps (free) variables to their types.
 type Env = [(Name, Value)]
 
 type Signature = Map.Map Name SigDef
@@ -97,6 +97,8 @@ data Declaration
   -- the expression,
   -- the list of constructors.
   = DataDecl Name Sized [Pos] Telescope Expr [TypeSig]
+  -- a function declaration has a name, and an expression,
+  -- and a list of clauses.
   | FunDecl [(TypeSig, [Clause])]
   deriving (Eq, Show)
 
@@ -111,6 +113,7 @@ type Telescope = [TBind]
 
 type TBind = (Name, Expr)
 
+-- a clause has a list of patterns and the right hand side expression
 data Clause =
   Clause [Pattern] Expr
   deriving (Eq, Show)
@@ -118,8 +121,8 @@ data Clause =
 data Pattern
   = VarP Name -- variable pattern
   | ConP Name [Pattern] -- constructor pattern
-  | SuccP Pattern -- size successor pattern
   | DotP Expr -- inaccessible pattern
+  | SuccP Pattern -- size successor pattern
   deriving (Eq, Show)
 
 emptySig :: Signature
@@ -134,5 +137,6 @@ lookupSig n sig =
 addSig :: Signature -> Name -> SigDef -> Signature
 addSig sig n def = Map.insert n def sig
 
+-- Return type of all type-checking functions.
 -- state monad for global signature
 type TypeCheck a = StateT Signature IO a
