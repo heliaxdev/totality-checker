@@ -124,6 +124,9 @@ corresponding $e$. Thus, an environment $\rho$ is a list of pairs of variable an
         &  & | &  & Pi \: x \: v \: e^{\rho} &  & \textrm{dependent function space} \\
         &  & | &  & k                        &  & \textrm{generic value}            \\
         &  & | &  & \star                    &  & \textrm{universe of small types}  \\
+        &  & | &  & c                        &  & \textrm{constructor}              \\
+        &  & | &  & f                        &  & \textrm{function}                 \\
+        &  & | &  & D                        &  & \textrm{data type}                \\
     \end{aligned}
   \end{equation*}
   \caption{Values}
@@ -649,12 +652,27 @@ The composition of two substitutions ($\boldsymbol{compSubst}$) merges two subst
 
 Assume that the domains of the substitutions are disjoint and that there are no occurrences of the generic values of $\sigma_1$ in the values of the codomain of $\sigma_2$.
 
-$inst$ also calls the function that checks that an atomic value $a$ does not occur in a value $v$:
+$inst$ also calls $\boldsymbol{nonOccur}$, the function that checks that an atomic value $a$ does not occur in a value $v$. 
+
+$\boldsymbol{nonOccur}$ takes 3 arguments:
+
+\begin{enumerate}
+  \item $k$, the next fresh generic value.
+  \item $a$, the atomic value ($k, \star, c, f, D$) being checked.
+  \item $v$, the value to check that $a$ is not in.
+\end{enumerate}
+
+$nonOccur$ returns a boolean: true if $a$ is not in $v$, false otherwise.  
 
 \begin{figure}[H]
   \begin{equation*}
     \begin{aligned}
-      nonOccur \: k \: a \: v & = & \\
+      nonOccur \: k \: a \: (Pi \: x \: v_A \: B^{\rho}) & = & nonOccur \: k \: a \: v_A \: \land                   \\
+                                                         &   & nonOccur \: (k+1) \: a \: (eval B^{\rho:(x,k)})      \\
+      nonOccur \: k \: a \: (Lam \: x \: e^{\rho})       & = & nonOccur \: (k+1) \: a \: (eval \: e^{\rho:(x,k)})   \\
+      nonOccur \: k \: a \: (v \: (v_1 \dots v_n))       & = & nonOccur \: k \: a \: v \: \land                     \\                                                        
+                                                         &   & nonOccur \: k \: a \: v_j, \forall j \in {1 \dots n} \\
+      nonOccur \: k \: a \: a'                           & = & a \neq a'                                            \\
     \end{aligned}
   \end{equation*}
   \caption{Non-occurrence of Atomic Value $a$, $nonOccur$}
@@ -664,14 +682,25 @@ $inst$ takes 4 arguments:
 
 \begin{enumerate}
   \item $k$, the next fresh generic value.
-  \item a set of flexible generic values.
+  \item a set of flexible generic values of inaccessible patterns.
   \item [(3,4)] the values to unify.
 \end{enumerate}
 
 \begin{figure}[H]
   \begin{equation*}
     \begin{aligned}
-      inst \: k \: [dot_1,\dots,dot_n] \: v_1 \: v_2 & = & \\
+      inst \: k \: [k_1,\dots,k_n] \: k' \: v                                            & =              & (k', v) \textrm{ if } k' \in [k_1 \dots k_n]                                                                                                                      \\
+      inst \: k \: [k_1,\dots,k_n] \: v \: k'                                            & =              & (k', v) \textrm{ if } k' \in [k_1 \dots k_n]                                                                                                                      \\
+      inst \: k \: [k_1,\dots,k_n] \: (c \: (v_1 \dots v_n)) \: (c \: (w_1 \dots w_n))   & =              & instList \: k \: [k_1,\dots,k_n] \: (v_1 \dots v_n) \: (w_1 \dots w_n)                                                                                            \\
+      inst \: k \: [k_1,\dots,k_n] \: (D \: (v_1 \dots v_n)) \: (D \: (w_1 \dots w_n))   & =              & instList \: k \: [k_1,\dots,k_n] \: (v_1 \dots v_n) \: (w_1 \dots w_n)                                                                                            \\
+      inst \: k \: [k_1,\dots,k_n] \: (f \: (v_1 \dots v_n)) \: (f \: (w_1 \dots w_n))   & =              & instList \: k \: [k_1,\dots,k_n] \: (v_1 \dots v_n) \: (w_1 \dots w_n)                                                                                            \\
+      inst \: k \: [k_1,\dots,k_n] \: v_1 \: v_2                                         & =              & () \textrm{ if } eqVal \: k \: v_1 \: v_2                                                                                                                         \\
+      \\
+      instList \: k \: [k_1,\dots,k_n] \: () \: ()                                       & =              & ()                                                                                                                                                                \\
+      instList \: k \: [k_1,\dots,k_n] \: (v_1 \: v_2 \: \dots) \: (w_1 \: w_2 \: \dots) & =              & compSubst \: \sigma \: \sigma'                                                                                                                                    \\
+                                                                                         & \textrm{where} &                                                                                                                                                                   \\
+      \sigma = inst \: k \: [k_1,\dots,k_n] \: v_1 \: w_2 \: \land                       &                &                                                                                                                                                                   \\
+      \noalign{$\sigma'                                                                             =               instList \: k [k_1,\dots,k_n] \: ((substVal \sigma \: v_2) \dots (substVal \sigma \: v_n)) \: ((substVal \sigma \: w_2) \dots (substVal \sigma \: w_n))$} \\
     \end{aligned}
   \end{equation*}
   \caption{Instantiation of Flexible Values by Unification, $inst$}

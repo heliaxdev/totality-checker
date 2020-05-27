@@ -82,7 +82,7 @@ spos _k _a _ = return True
 
 -- non-occurrence check of atomic value a:
 -- check that a (2nd input) does not occur in tv (3rd input)
--- a may be a "atomic value" i.e not pi, lam, app, or succ
+-- a is an atomic value i.e not pi, lam, app, or succ
 nonOccur :: Int -> Value -> Value -> TypeCheck Bool
 nonOccur k a (VPi x av env b) = do
   aNotInav <- nonOccur k a av
@@ -94,9 +94,10 @@ nonOccur k a (VPi x av env b) = do
 nonOccur k a (VLam x env b) = do
   bv <- eval (updateEnv env x (VGen k)) b
   nonOccur (k + 1) a bv
-nonOccur k a (VApp var vs) = do
-  aNotInVar <- nonOccur k a var
+nonOccur k a (VApp x vs) = do
+  aNotInx <- nonOccur k a x
   listNotInvs <- mapM (nonOccur k a) vs
-  return $ aNotInVar && and listNotInvs
+  return $ aNotInx && and listNotInvs
 nonOccur k a (VSucc v) = nonOccur k a v
+-- given tv is an atomic value, if a ≠ tv, then a doesn't occur in tv
 nonOccur _k a tv = return $ a /= tv

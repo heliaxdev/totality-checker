@@ -60,15 +60,18 @@ checkPattern k flex ins rho gamma (VPi x av env b) (DotP e) = do
 checkPattern _k _flex _ins _rho _gamma v _ = error $ "checkpattern: " <> show v
 
 -- match v1 against v2 by unification, yielding a substition
+-- If v1 is a flexible variable and v2 is a term not containing v1
+-- we can instantiate v1 to v2, vice versa.
 inst :: Int -> [Int] -> Value -> Value -> TypeCheck Substitution
 inst m flex v1 v2 =
   case (v1, v2) of
     (VGen k, _)
+    -- the problem equation is {k = v2}
       | k `elem` flex -- if k is a dot pattern
        -> do
         noc <- nonOccur m v1 v2 -- check for non-occurence
-        if noc -- if v1 is not in v2
-          then return [(k, v2)] -- instantiate k to v2
+        if noc -- if k is not in v2
+          then return [(k, v2)] -- {k ↦ v2}
           else error "inst: occurs check failed"
     (_, VGen k)
       | k `elem` flex -> do
@@ -76,15 +79,16 @@ inst m flex v1 v2 =
         if noc
           then return [(k, v1)]
           else error "inst: occurs check failed"
-    (VApp (VDef d1) vl1, VApp (VDef d2) vl2)
+    (VApp (VDef d1) vl1, VApp (VDef d2) vl2) --
       | d1 == d2 -> instList m flex vl1 vl2
     (VApp (VCon c1) vl1, VApp (VCon c2) vl2)
       | c1 == c2 -> instList m flex vl1 vl2
     (VSucc v1', VSucc v2') -> inst m flex v1' v2'
     (VSucc v, VInfty) -> inst m flex v VInfty
-    _ -> do
-      eqVal m v1 v2
-      return []
+    _ -- includes k ∉ dot pattern, d1 ≠ d2 and c1 ≠ c2
+     -> do
+      eqVal m v1 v2 -- v1 equals v2
+      return [] -- no substitution found
 
 instList :: Int -> [Int] -> [Value] -> [Value] -> TypeCheck Substitution
 instList _m _flex [] [] = return []
@@ -120,9 +124,6 @@ substVal sub (VApp v1 vl) = do
   v1' <- substVal sub v1
   vl' <- mapM (substVal sub) vl
   return $ VApp v1' vl'
-substVal sub (VSucc v1) = do
-  v1' <- substVal sub v1
-  return $ sinfty v1'
 substVal sub (VPi x av env b) = do
   av' <- substVal sub av
   env' <- substEnv sub env
@@ -130,6 +131,9 @@ substVal sub (VPi x av env b) = do
 substVal sub (VLam x env b) = do
   env' <- substEnv sub env
   return $ VLam x env' b
+substVal sub (VSucc v1) = do
+  v1' <- substVal sub v1
+  return $ sinfty v1'
 substVal _sub v = return v
 
 -- substitute in environment
