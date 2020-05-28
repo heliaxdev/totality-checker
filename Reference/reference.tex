@@ -10,6 +10,9 @@
 \settopmatter{printacmref=false}
 %
 \usepackage{hyperref}
+\usepackage{listings}
+\usepackage{fancyvrb}
+\DefineVerbatimEnvironment{code}{Verbatim}{fontsize=\small}
 \begin{document}
 
 \title{A Totality Checker for a Dependently Typed Language}
@@ -159,7 +162,7 @@ A signature $\Sigma$ carries information about all declared constants (construct
       \Sigma D & : & (\textrm{value, integer})                        \\
     \end{aligned}
   \end{equation*}
-  \caption{Mapping types in a Signature}
+  \caption{Types of Mappings in a Signature}
 \end{figure}
 
 The signature is in a \emph{state} monad so that we can retrieve the signature during type and totality checking. The mapping of a constant may be added before the constant is type-checked. For a function constant, the mapping contains the information about whether the clauses have been type-checked.
@@ -412,19 +415,25 @@ If $v_1$ does not equal to $v_2$, an error occurs. Unless an error occurs, it re
 \end{figure}
 
 \subsection{Type Checking of Data Types}
+\label{sec:datatypes}
 
 In this section I describe how data type declarations are type checked. See \emph{$checkDataType.hs$}.
 
 A data type $\boldsymbol{D}$, parameterised by parameters $\boldsymbol{p_1 \dots p_n}$, indexed over $\boldsymbol{\Theta}$, inductively defined by the constructors $\boldsymbol{c_1 \dots c_n}$ with the given types, is declared as follows:
 
-\begin{equation*}
-  \begin{aligned}
-    data &  & \: D \: (p_1:P_1) \dots (p_n:P_n) : \Theta \to \star       \\
-         &  & c_1 : \Delta_1 \to D \: p_1 \dots p_n \: t_1^1 \dots t_m^1 \\
-         &  & \dots                                                      \\
-         &  & c_k : \Delta_k \to D \: p_1 \dots p_n \: t_1^k \dots t_m^k \\                                                           \\
-  \end{aligned}
-\end{equation*}
+\begin{figure}[H]
+  \centering
+  \begin{equation*}
+    \begin{aligned}
+      data &  & \: D \: (p_1:P_1) \dots (p_n:P_n) : \Theta \to \star       \\
+           &  & c_1 : \Delta_1 \to D \: p_1 \dots p_n \: t_1^1 \dots t_m^1 \\
+           &  & \dots                                                      \\
+           &  & c_k : \Delta_k \to D \: p_1 \dots p_n \: t_1^k \dots t_m^k \\                                                           \\
+    \end{aligned}
+  \end{equation*}
+  \caption{A Data Type Declaration}
+  \label{fig:datatype}
+\end{figure}
 
 $D$'s constructor $c_i$ takes arguments ($\Delta_i$) and has the return type of $D \: p_1 \dots p_n \: t_1^i \dots t_m^i$ where $t_1^i \dots t_m^i \in \Theta$, the arguments of the index of $D$.
 
@@ -676,6 +685,7 @@ $nonOccur$ returns a boolean: true if $a$ is not in $v$, false otherwise.
     \end{aligned}
   \end{equation*}
   \caption{Non-occurrence of Atomic Value $a$, $nonOccur$}
+  \label{fig:nonOccur}
 \end{figure}
 
 $inst$ takes 4 arguments:
@@ -709,8 +719,80 @@ $inst$ takes 4 arguments:
 \section{Strict Positivity Checks}
 \label{sec:spos}
 
+This section concerns the property of the constructors of a data type declarations (see section \ref{sec:datatypes}). Following figure \ref{fig:datatype}'s notations, the strict positivity check ensures that the data type $D$ does not occur (see figure \ref{fig:nonOccur}) in its own constructors ($c_i$). In other words, $D$ must only occur strictly positively in $\Delta_i$.
 
+The strict positivity condition rules out declarations that contain infinite loops. For example,
 
+\begin{equation*}
+  \begin{aligned}
+    data &  & Bad : \star                 \\
+         &  & bad : (Bad \to Bad) \to Bad \\
+  \end{aligned}
+\end{equation*}
+
+The data type $Bad$ has one constructor, $bad$, it takes one argument, $\Delta_1 = (Bad \to Bad)$. 
+
+One can see from $\Delta_1$ that the data type $Bad$ is an argument to the function that is an input of its own constructor. Thus, there is a negative occurrence of $Bad$ in the type of the argument of the constructor. That is, $D$ does not occur strictly positively in $\Delta_1$. Non strictly-positive declarations are rejected because one can write a non-terminating function using them. Consider the following Haskell code using $Bad$ as defined above:
+
+\begin{lstlisting}[language=haskell]
+  getFun :: Bad -> (Bad -> Bad)
+  getFun (bad f) = f
+  
+  omega :: Bad -> Bad
+  omega f = (getFun f) f
+  
+  loop :: Bad
+  loop = omega (Bad omega)
+\end{lstlisting}
+
+$bad$ takes in a function $f$ with the type $Bad \to Bad$. Thus $bad f$ has type $Bad$. Because the return type of $(getFun f)$ is $(Bad \to Bad)$, $(getFun f) f$ has the return type of $Bad$. All these functions have proper types. Allowing non-strictly positive constructors allows $loop$, which infinitely loops.
+
+\subsection{Positive Parameters}
+
+We add a positivity tag to distinguish between strictly positive parameters and non-strictly positive parameters:
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      Pos &  & = &  & SPos  &  & \textrm{strictly positive}     \\
+          &  & | &  & NSpos &  & \textrm{non-strictly positive} \\
+    \end{aligned}
+  \end{equation*}
+\end{figure}
+
+The information of whether a data type's parameters are strictly positive is stored in the signature for the check. The mapping for data type in the signature is now:
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      \Sigma D & : & (\textrm{value, Pos, integer}) \\
+    \end{aligned}
+  \end{equation*}
+  \caption{Types of Data Type Mapping in a Signature}
+\end{figure}
+
+\subsection{Strictly Positive Occurrence}
+
+To check that a data type does occur in its constructor, we only need to check that for constructors that are functions. The data type cannot occur in constructors that don't take arguments. $sposConstructor$ checks that a constructor is strictly positive. It takes 4 arguments:
+
+\begin{enumerate}
+  \item the name of the constructor being checked.
+  \item the next fresh generic variable.
+  \item the list of positivity tag.
+  \item the type of the constructor being checked.
+\end{enumerate}
+
+If the constructor is strictly positive, then $sposConstructor$ returns $unit$. Otherwise, an error occurs.
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      sposConstructor \: n \: k \: [pos] \: (Pi \: x \: v_A \: B^{\rho}) & = & sposConstructor \: n \: k \: [pos] \: v_A \: \land                 \\
+                                                                         &   & sposConstructor \: n \: (k+1) \: [pos] \: (eval \: B^{\rho:(x,k)})
+    \end{aligned}
+  \end{equation*}
+  \caption{Strict Positivity Test for a Constructor}
+\end{figure}
 
 \section{Termination Checks}
 \label{sec:termination}

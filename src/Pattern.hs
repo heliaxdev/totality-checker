@@ -9,7 +9,7 @@ import           Types
 -- a substitution is a list of a partial mapping of generic values to values.
 type Substitution = [(Int, Value)]
 
-checkPatterns ::
+checkPats ::
      Int
   -> [(Int, (Expr, Value))]
   -> Substitution
@@ -18,10 +18,10 @@ checkPatterns ::
   -> Value
   -> [Pattern]
   -> TypeCheck (Int, [(Int, (Expr, Value))], Substitution, Env, Env, Value)
-checkPatterns k flex ins rho gamma v [] = return (k, flex, ins, rho, gamma, v)
-checkPatterns k flex ins rho gamma v (p:pl) = do
+checkPats k flex ins rho gamma v [] = return (k, flex, ins, rho, gamma, v)
+checkPats k flex ins rho gamma v (p:pl) = do
   (k', flex', ins', rho', gamma', v') <- checkPattern k flex ins rho gamma v p
-  checkPatterns k' flex' ins' rho' gamma' v' pl
+  checkPats k' flex' ins' rho' gamma' v' pl
 
 -- checkPattern only checks for accessible patterns.
 -- dot patterns will be represented by fresh flexible generic values,
@@ -43,13 +43,14 @@ checkPattern k flex ins rho gamma (VPi x av env b) (VarP y) = do
 checkPattern k flex ins rho gamma (VPi x av env b) (ConP n pl) = do
   sig <- get
   let ConSig vc = lookupSig n sig
-  (k', flex', ins', rho', gamma', vc') <-
-    checkPatterns k flex ins rho gamma vc pl
+  -- check the list of patterns of the constructor,
+  -- updating the list of dot pattern and their types & substitutions
+  (k', flex', ins', rho', gamma', vc') <- checkPats k flex ins rho gamma vc pl
   let flexgen = map fst flex'
   sub <- inst k' flexgen vc' av -- instantiate flex variables
   let pv = patternToVal k (ConP n pl)
   vb <- eval (updateEnv env x pv) b
-  -- composition of substitutions from checkPatterns and instantiated flex var
+  -- composition of substitutions from checkPats and instantiated flex var
   ins'' <- compSubst ins' sub
   vb' <- substVal ins'' vb -- substitute generic variable in value
   gamma'' <- substEnv ins'' gamma'
@@ -57,7 +58,8 @@ checkPattern k flex ins rho gamma (VPi x av env b) (ConP n pl) = do
 checkPattern k flex ins rho gamma (VPi x av env b) (DotP e) = do
   vb <- eval (updateEnv env x (VGen k)) b
   return (k + 1, (k, (e, av)) : flex, ins, rho, gamma, vb)
-checkPattern _k _flex _ins _rho _gamma v _ = error $ "checkpattern: " <> show v
+checkPattern _k _flex _ins _rho _gamma v _ =
+  error $ "checkPattern: " <> show v <> " should be a dependent function."
 
 -- match v1 against v2 by unification, yielding a substition
 -- If v1 is a flexible variable and v2 is a term not containing v1
@@ -85,7 +87,7 @@ inst m flex v1 v2 =
       | c1 == c2 -> instList m flex vl1 vl2
     (VSucc v1', VSucc v2') -> inst m flex v1' v2'
     (VSucc v, VInfty) -> inst m flex v VInfty
-    _ -- includes k ∉ dot pattern, d1 ≠ d2 and c1 ≠ c2
+    _ -- includes k ∉ dot pattern, d1 ≠ d2, and c1 ≠ c2
      -> do
       eqVal m v1 v2 -- v1 equals v2
       return [] -- no substitution found

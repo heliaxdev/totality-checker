@@ -5,6 +5,7 @@
 *.toc
 *.log
 *.out
+*.pyg
 *.synctex.gz
 .vscode/
 *~
