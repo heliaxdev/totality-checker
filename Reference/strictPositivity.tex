@@ -1,0 +1,111 @@
+\section{Strict Positivity Checks}
+\label{sec:spos}
+
+This section concerns the property of the constructors of a data type declarations (see section \ref{sec:datatypes}). Following figure \ref{fig:datatype}'s notations, the strict positivity check ensures that the data type $D$ does not \emph{occur} (see figure \ref{fig:nonOccur}) in its own constructors ($c_i$). In other words, $D$ must only \emph{occur strictly positively} in $\Delta_i$.
+
+The strict positivity condition rules out declarations that contain infinite loops. For example,
+
+\begin{equation*}
+  \begin{aligned}
+    data &  & Bad : \star                 \\
+         &  & bad : (Bad \to Bad) \to Bad \\
+  \end{aligned}
+\end{equation*}
+
+The data type $Bad$ has one constructor, $bad$, it takes one argument, $\Delta_1 = (Bad \to Bad)$.
+
+One can see from $\Delta_1$ that the data type $Bad$ is an argument to the function that is an input of its own constructor. Thus, there is a negative occurrence of $Bad$ in the type of the argument of the constructor. That is, $D$ does not occur strictly positively in $\Delta_1$. Non strictly-positive declarations are rejected because one can write a non-terminating function using them. Consider the following Haskell code using $Bad$ as defined above:
+
+\begin{lstlisting}[language=haskell]
+  getFun :: Bad -> (Bad -> Bad)
+  getFun (bad f) = f
+  
+  omega :: Bad -> Bad
+  omega f = (getFun f) f
+  
+  loop :: Bad
+  loop = omega (bad omega)
+\end{lstlisting}
+
+$bad$ takes in a function $f$ with the type $Bad \to Bad$. Thus $bad \: f$ has type $Bad$. Because the return type of $(getFun \: f)$ is $(Bad \to Bad)$, $(getFun \: f) \: f$ has the return type of $Bad$. All these functions have proper types. Allowing non-strictly positive constructors allows $loop$, which infinitely loops.
+
+In short, the data type to be defined cannot occur in its constructor's arguments' function domain or in an application.
+
+\subsection{Positive Parameters}
+
+We add a positivity tag to distinguish between strictly positive parameters and non-strictly positive parameters:
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      Pos &  & = &  & SPos  &  & \textrm{strictly positive}     \\
+          &  & | &  & NSpos &  & \textrm{non-strictly positive} \\
+    \end{aligned}
+  \end{equation*}
+\end{figure}
+
+The set of positive parameter indices of a data type $D$ is represented by $\boldsymbol{pos(D)}$.
+
+The information of whether a data type's parameters are strictly positive is stored in the signature for the check. The mapping for data type in the signature is now:
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      \Sigma D & : & (\textrm{value, Pos, integer}) \\
+    \end{aligned}
+  \end{equation*}
+  \caption{Types of Data Type Mapping in a Signature}
+\end{figure}
+
+\subsection{Strictly Positive Occurrence}
+
+To check that a data type occurs in its constructor arguments strictly positively, we only need to check its constructors that are functions. The data type cannot occur in constructors that don't take arguments. $sposConstructor$ checks that a constructor is strictly positive. It takes 4 arguments:
+
+\begin{enumerate}
+  \item the name of the data type being checked.
+  \item the next fresh generic value.
+  \item the list of positivity tag.
+  \item the type of the constructor being checked.
+\end{enumerate}
+
+If the constructor is strictly positive, then $sposConstructor$ returns $unit$. Otherwise, an error occurs.
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      sposConstructor \: n \: k \: [pos] \: (Pi \: x \: v_A \: B^{\rho}) & = & spos \: k \: D \: v_A \: \land                                     \\
+                                                                         &   & sposConstructor \: n \: (k+1) \: [pos] \: (eval \: B^{\rho:(x,k)}) \\
+    \end{aligned}
+  \end{equation*}
+  \caption{Strict Positivity Test for a Constructor}
+\end{figure}
+
+$sposConstructor$ calls $\boldsymbol{spos}$, which checks for strictly positive occurrence, and takes 3 arguments:
+
+\begin{enumerate}
+  \item the next fresh generic value.
+  \item $a$ the value to check the occurrence of.
+  \item the value that $a$ may occur in.
+\end{enumerate}
+
+$spos$ returns a boolean: if the data type occurs strictly positively, it returns true. Otherwise, it returns false.
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      spos \: k \: D \: (Pi \: x \: v_A \: B^{\rho}) & = & nonOccur \: k \: D \: v_A \: \land                                             \\
+                                                     &   & spos \: (k+1) \: D \: (eval \: B^{\rho:(x,k)})                                 \\
+      spos \: k \: D \: (Lam \: x \: e^{\rho})       & = & spos \: (k+1) \: D \: (eval \: e^{\rho:(x,k)})                                 \\
+      spos \: k \: D \: (D \: v_1 \dots v_m)         & = & nonOccur \: k \: D \: v_j, \forall j \in \{1 \dots m\}, \notin pos(D) \: \land \\
+                                                     &   & spos \: c \: D \: v_j, \forall j \in pos(D)                                    \\
+      spos \: k \: D \: (v \: v_1 \dots v_n)         & = & spos \: k \: D \: v \: \land                                                   \\
+                                                     &   & nonOccur \: k \: D \: v_j \forall j \in \{1 \dots n\}                          \\
+      spos \: k \: D \: a                            & = & True                                                                           \\
+    \end{aligned}
+  \end{equation*}
+  \caption{Strictly Positive Occurrence}
+\end{figure}
+
+$spos$ calls $nonOccur$ which is a stronger requirement than $spos$. $nonOccur$ checks that $D$ does not occur in the term at all while $spos$ checks that $D$ occurs in the term strictly positively.
+
+We need to check for non-occurrence in certain circumstances in to determine strict positivity. For example, for a constructor which takes a function as an argument, $D$ has to not occur in the argument of that function.

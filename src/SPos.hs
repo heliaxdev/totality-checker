@@ -14,14 +14,25 @@ import           Types
 -- the spos declared parameter variables are only used strictly positively
 sposConstructor :: Name -> Int -> [Pos] -> Value -> TypeCheck ()
 sposConstructor n k sp (VPi x av env b) = do
-  spr <- spos 0 (VDef n) av
+  spr <- spos 0 (VDef n) av -- does D occur strictly positively in the arg?
   spv <- sposVals (posGen 0 sp) av
   case (spr, spv) of
     (True, True) -> do
       bv <- eval (updateEnv env x (VGen k)) b
       sposConstructor n (k + 1) sp bv
-    (False, _) -> error "rec. arg not strictly positive"
-    (True, False) -> error "parameter not strictly positive"
+    (False, True) ->
+      error $
+      "spos: when checking data type " <> show n <>
+      "one of its constructor contains not strictly positive recursive arguments."
+    (True, False) ->
+      error $
+      "spos: when checking data type " <> show n <>
+      "one of its constructor contains not strictly positive parameters."
+    (False, False) ->
+      error $
+      "spos: when checking data type " <> show n <>
+      "one of its constructor contains not strictly positive recursive arguments and parameters."
+-- if the constructor type is not a function, then it's strictly positive.
 sposConstructor _n _k _sp _ = return ()
 
 sposVals :: [Value] -> Value -> TypeCheck Bool
@@ -43,12 +54,11 @@ posArgs vl pl =
       l2 = [v | (v, NSPos) <- l]
    in (l1, l2)
 
--- check that a does occurs strictly pos tv
--- a is an atomic value.
+-- check that the data type occurs strictly positively in tv
 spos :: Int -> Value -> Value -> TypeCheck Bool
 spos k a (VPi x av env b) = do
-  no <- nonOccur k a av
-  if no
+  aNotInav <- nonOccur k a av
+  if aNotInav
     then do
       bv <- eval (updateEnv env x (VGen k)) b
       spos (k + 1) a bv
@@ -70,14 +80,15 @@ spos k a (VApp (VDef m) vl) = do
       nl <- mapM (nonOccur k a) vl
       return $ and nl
 spos k a (VApp v' vl) =
-  if v' == a
+  if v' == a -- D is allowed to be the argument type of the constructor
     then do
       nl <- mapM (nonOccur k a) vl
       return $ and nl
     else do
-      n <- nonOccur k a v'
+      n <- nonOccur k a v' -- if v'≠ D, then D must not occur in v'
       nl <- mapM (nonOccur k a) vl
       return $ n && and nl
+-- the data type occurs in an atomic value strictly positively
 spos _k _a _ = return True
 
 -- non-occurrence check of atomic value a:
