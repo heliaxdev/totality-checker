@@ -15,6 +15,7 @@ import           Types
 sposConstructor :: Name -> Int -> [Pos] -> Value -> TypeCheck ()
 sposConstructor n k sp (VPi x av env b) = do
   spr <- spos 0 (VDef n) av -- does D occur strictly positively in the arg?
+  -- check that the declared spos parameters are spos in the constructor arg
   spv <- sposVals (posGen 0 sp) av
   case (spr, spv) of
     (True, True) -> do
@@ -40,6 +41,7 @@ sposVals vals tv = do
   sl <- mapM (\i -> spos 0 i tv) vals
   return $ and sl
 
+-- returns a list of declared strictly positive parameters as VGen k.
 posGen :: Int -> [Pos] -> [Value]
 posGen _i [] = []
 posGen i (p:pl) =
@@ -71,9 +73,10 @@ spos k a (VApp (VDef m) vl) = do
   sig <- get
   case lookupSig m sig of
     (DataSig p pos _ _) -> do
-      let (pparams, nparams) = posArgs vl pos
+      let (pparams, nparams) = posArgs vl pos -- pos proven in sposConstructor
       let rest = drop p vl
-      sl <- mapM (spos k a) pparams
+      sl <- mapM (spos k a) pparams -- D must occur strictly pos in pos arg
+      -- D must not occur in not strictly positive arg
       nl <- mapM (nonOccur k a) (nparams <> rest)
       return $ and sl && and nl
     _ -> do
