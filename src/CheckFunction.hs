@@ -7,22 +7,26 @@ import           Evaluator           (eval)
 import           Pattern
 import           Types
 
+-- check a list of functions
 typeCheckFuns :: [(TypeSig, [Clause])] -> TypeCheck ()
 typeCheckFuns funs = do
-  mapM_ addFunSig funs
+  mapM_ addFunSig funs -- add all funs in the list (non-typechecked) to the sig
+  -- type check all clauses of all functions in the list
   zipWithM_ typeCheckFunClause [1 ..] funs
-  mapM_ enableSig funs
+  mapM_ enableSig funs -- set typechecked field to True
 
+-- add function n to the sig
 addFunSig :: (TypeSig, [Clause]) -> TypeCheck ()
 addFunSig (TypeSig n t, cl) = do
   sig <- get
   vt <- eval [] t
-  put (addSig sig n (FunSig vt cl False)) --not yet type checked / termination checked
+  -- typechecked field set to False because it's non-type/termination checked
+  put (addSig sig n (FunSig vt cl False))
 
+-- check all clauses of a function.
 typeCheckFunClause :: Int -> (TypeSig, [Clause]) -> TypeCheck ()
 typeCheckFunClause _k (TypeSig _n t, cl) = checkFun t cl
 
--- We need to check all clauses of a function.
 checkFun :: Expr -> [Clause] -> TypeCheck ()
 checkFun = checkFun' 1
 
@@ -32,7 +36,7 @@ checkFun' i e (c:cl) = do
   checkClause i e c
   checkFun' (i + 1) e cl
 
--- We need to check each clause of a function separately:
+-- check each clause of a function separately:
 -- first we check the patterns (see module Pattern)
 -- and then the right hand side (e).
 checkClause :: Int -> Expr -> Clause -> TypeCheck ()
@@ -45,6 +49,7 @@ checkClause _i e (Clause pl rhs) = do
   -- check the right hand side (e)
   checkExpr k rho gamma rhs vt
 
+-- set the typechecked field in sig (of the function with name n) to True.
 enableSig :: (TypeSig, [Clause]) -> TypeCheck ()
 enableSig (TypeSig n _, _) = do
   sig <- get

@@ -1,4 +1,4 @@
-\section{type checking without totality checks}
+\section{Type Checking without Totality Checks}
 \label{sec:prelim}
 The type checker checks \emph{data type} and \emph{function} declarations. These declarations
 consist of \emph{expressions}. Because of dependent types, we need to \emph{evaulate} expressions to \emph{values} during type checking. We also need a \emph{signature} that collects and carries information about the declarations during type checking.
@@ -251,7 +251,7 @@ Each clause is tried until one is matched or there are no clauses left. If there
   \caption{$app_{fun}$}
 \end{figure}
 
-\subsection{Type Checking of Expressions}
+\subsection{Type Checking Expressions}
 
 Recall that declarations consist of expressions. Type checking a declaration therefore comprises type checking expressions. See $CheckExpr.hs$.
 
@@ -266,7 +266,7 @@ $checkExpr$ calls $inferExpr$ as needed to infer the type of the input expressio
 
 $checkExpr$, $inferExpr$, and $eqVal$ are simultanously defined in the next sections.
 
-All type checking functions return a state transformer monad $StateT \: Signature \: IO \: a$. The state is the signature, which contains information for type checking of data type/function declarations. The inner monad is the $IO$ monad.
+All type checking functions return a state transformer monad $StateT \: Signature \: IO \: a$. The state is the signature, which contains information for type checking data type/function declarations. The inner monad is the $IO$ monad.
 
 $a$ is $unit$ for $checkExpr$ and $eqVal$. If no error occurs, each step of the $IO$ returns $\boldsymbol{()}$. $a$ is $value$ for $inferExpr$, because $inferExpr$ returns the type of the input expression.
 
@@ -353,7 +353,7 @@ If $v_1$ does not equal to $v_2$, an error occurs. Unless an error occurs, it re
   \caption{Equality of Values, $eqVal$}
 \end{figure}
 
-\subsection{Type Checking of Data Types}
+\subsection{Type Checking Data Types}
 \label{sec:datatypes}
 
 In this section I describe how data type declarations are type checked. See \emph{$checkDataType.hs$}.
@@ -500,7 +500,7 @@ $typeCheckConstructor$ calls $checkConType$, which is very similar to $checkData
 
 When we type-check a data type declaration (in $TypeChecker.hs$), both $checkDataType$ and $checkConType$ are called starting with $k=0$ and empty environments. They check all expressions.
 
-\subsection{Type Checking of Functions}
+\subsection{Type Checking Functions}
 
 In this section I describe how function declarations are type checked. See \emph{$checkFunction.hs$} and \emph{$Pattern.hs$}.
 
@@ -521,7 +521,7 @@ To type-check a function, we type-check all its clauses.
 
 To type-check a clause, we first type-check all its patterns (in $Pattern.hs$), yielding an environment for the free variables in the right hand side $e$. After that, we check the right hand side.
 
-\subsubsection{Type Checking of Patterns}
+\subsubsection{Type Checking Patterns}
 \label{sec:typeCheckPattern}
 
 Recall that a pattern is either a \emph{variable} pattern, a \emph{constructor} pattern, or an \emph{inaccessible} pattern. A constructor pattern is parameterised by a \emph{name} and a \emph{list of patterns}. Therefore, a constructor pattern may have variable or inaccessible patterns as its parameter.
@@ -638,8 +638,8 @@ $inst$ takes 4 arguments:
 \begin{figure}[H]
   \begin{equation*}
     \begin{aligned}
-      inst \: k \: [k_1,\dots,k_n] \: k' \: v                                            & =              & (k', v) \textrm{ if } k' \in [k_1 \dots k_n]                                                                                                                      \\
-      inst \: k \: [k_1,\dots,k_n] \: v \: k'                                            & =              & (k', v) \textrm{ if } k' \in [k_1 \dots k_n]                                                                                                                      \\
+      inst \: k \: [k_1,\dots,k_n] \: k' \: v                                            & =              & (k', v) \textrm{ if } nonOccur \: k \: k' \: v \: \land \: k' \in [k_1 \dots k_n]                                                                                 \\
+      inst \: k \: [k_1,\dots,k_n] \: v \: k'                                            & =              & (k', v) \textrm{ if } nonOccur \: k \: k' \: v \: \land \: k' \in [k_1 \dots k_n]                                                                                 \\
       inst \: k \: [k_1,\dots,k_n] \: (c \: (v_1 \dots v_n)) \: (c \: (w_1 \dots w_n))   & =              & instList \: k \: [k_1,\dots,k_n] \: (v_1 \dots v_n) \: (w_1 \dots w_n)                                                                                            \\
       inst \: k \: [k_1,\dots,k_n] \: (D \: (v_1 \dots v_n)) \: (D \: (w_1 \dots w_n))   & =              & instList \: k \: [k_1,\dots,k_n] \: (v_1 \dots v_n) \: (w_1 \dots w_n)                                                                                            \\
       inst \: k \: [k_1,\dots,k_n] \: (f \: (v_1 \dots v_n)) \: (f \: (w_1 \dots w_n))   & =              & instList \: k \: [k_1,\dots,k_n] \: (v_1 \dots v_n) \: (w_1 \dots w_n)                                                                                            \\
@@ -654,3 +654,20 @@ $inst$ takes 4 arguments:
   \end{equation*}
   \caption{Instantiation of Flexible Values by Unification, $inst$}
 \end{figure}
+
+The first phase is done by the functions $\boldsymbol{checkPattern}$ and $\boldsymbol{checkPats}$. $checkPats$ calls $checkPattern$ and checks a list of patterns instead a single pattern.
+
+$checkPattern$ checks a pattern. It takes 7 arguments:
+
+\begin{enumerate}
+  \item $k$, the next generic value.
+  \item a list of a pair of flexible variable and a pair of its dot pattern and type, of type [(Int, (Expr, Value))].
+  \item a substitution, of type [(Int, Value)], which is a list of flexible variables and their valuations).
+  \item environment $\rho$, which is a list of pairs of $n$ (variable name) and $k$ that binds a fresh generic value to a variable.
+  \item environment $\Gamma$, which is a list of pairs of $n$ and $v$ that binds the type to a variable.
+  \item the type of the expression.
+  \item the pattern to check.
+\end{enumerate}
+
+It returns the updated versions of the first 6 inputs.
+
