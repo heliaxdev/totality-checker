@@ -8,11 +8,11 @@ dependent types and totality checks. The totality checks include
 - termination checks. 
 
 I follow some of the works of 
-- 'Termination
+- *Termination
 checking for a dependently typed
-language'
+language*
 by Karl Mehltretter (2007) and 
-- 'Towards a practical programming
-language based on dependent type theory' by Ulf Norell (2007).
+- *Towards a practical programming
+language based on dependent type theory* by Ulf Norell (2007).
 
 See the [reference](https://github.com/thealmarty/totality-checker/blob/master/Reference/reference.pdf) for a complete reference.
