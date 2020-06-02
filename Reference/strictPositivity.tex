@@ -1,7 +1,7 @@
 \section{Strict Positivity Checks}
 \label{sec:spos}
 
-This section concerns the property of the constructors of a data type declarations (see section \ref{sec:datatypes}). Following figure \ref{fig:datatype}'s notations, the strict positivity check ensures that the data type $D$ does not \emph{occur} (see figure \ref{fig:nonOccur}) in its own constructors ($c_i$). In other words, $D$ must only \emph{occur strictly positively} in $\Delta_i$.
+This section is about a property of the constructors of a data type declaration (see section \ref{sec:datatypes}). Following figure \ref{fig:datatype}'s notations, the strict positivity check ensures that the data type $D$ only \emph{occur strictly positively} in $\Delta_i$. In other words, $D$ must not \emph{occur} (see figure \ref{fig:nonOccur}) in the left hand side of any $\Delta_i$ of its own constructor $c_i$.
 
 The strict positivity condition rules out declarations that contain infinite loops. For example,
 
@@ -29,9 +29,23 @@ One can see from $\Delta_1$ that the data type $Bad$ is an argument to the funct
 
 $bad$ takes in a function $f$ with the type $Bad \to Bad$. Thus $bad \: f$ has type $Bad$. Because the return type of $(getFun \: f)$ is $(Bad \to Bad)$, $(getFun \: f) \: f$ has the return type of $Bad$. All these functions have proper types. Allowing non-strictly positive constructors allows $loop$, which infinitely loops.
 
-In short, the data type to be defined cannot occur in its constructor's arguments' function domain or in an application.
+In short, the strict positivity check ensures that the data type to be defined cannot occur in its constructor's arguments' function domain or in an application.
 
 \subsection{Positive Parameters}
+
+When declaring a data type, one can declare the requirement of certain parameters being positive. To declare a parameter positive, the data type declaration has an additional $\boldsymbol{+}$ at the beginning of the parameter, i.e., $\boldsymbol{(+ \: p_i:P_i)}$ instead of $(p_i : P_i)$. The type checking ensures that the declared positive parameters occur in the constructors strictly positively.
+
+For example, the data type $Fun$ below is rejected by the type checker because $A$ is declared positive but it is not positive in the constructor $fn$:
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      data &  & Fun \: (+ \: A : \star) : \star \\
+           &  & fn : (A \to A ) \to Fun \: A    \\
+    \end{aligned}
+  \end{equation*}
+\end{figure}
+
 
 We add a positivity tag to distinguish between strictly positive parameters and non-strictly positive parameters:
 
@@ -74,6 +88,7 @@ If the constructor is strictly positive, then $sposConstructor$ returns $unit$. 
   \begin{equation*}
     \begin{aligned}
       sposConstructor \: n \: k \: [pos] \: (Pi \: x \: v_A \: B^{\rho}) & = & spos \: k \: D \: v_A \: \land                                     \\
+                                                                         &   & spos \: k \: j \: v_A, \: \forall j \in pos(D) \: \land            \\
                                                                          &   & sposConstructor \: n \: (k+1) \: [pos] \: (eval \: B^{\rho:(x,k)}) \\
     \end{aligned}
   \end{equation*}
@@ -109,3 +124,5 @@ $spos$ returns a boolean: if the data type occurs strictly positively, it return
 $spos$ calls $nonOccur$ which is a stronger requirement than $spos$. $nonOccur$ checks that $D$ does not occur in the term at all while $spos$ checks that $D$ occurs in the term strictly positively.
 
 We need to check for non-occurrence in certain circumstances in to determine strict positivity. For example, for a constructor which takes a function as an argument, $D$ has to not occur in the argument of that function.
+
+$sposConstructor$ is called by $typeCheckConstructor$, which is called by $typeCheckDeclaration$ on data type declarations. Every constructor of the data type is checked by $sposConstructor$. If any constructor is not strictly positive, an error occurs during type checking.

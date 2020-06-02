@@ -83,7 +83,7 @@ spos k a (VApp (VDef m) vl) = do
       nl <- mapM (nonOccur k a) vl
       return $ and nl
 spos k a (VApp v' vl) =
-  if v' == a -- D is allowed to be the argument type of the constructor
+  if v' == a -- D can be spos if it isn't an argument of an application
     then do
       nl <- mapM (nonOccur k a) vl
       return $ and nl
