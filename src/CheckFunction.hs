@@ -42,9 +42,9 @@ checkFun' i e (c:cl) = do
 checkClause :: Int -> Expr -> Clause -> TypeCheck ()
 checkClause _i e (Clause pl rhs) = do
   v <- eval [] e
-  -- check accessible patterns
+  -- phase 1: check accessible patterns & inst dot patterns
   (k, flex, ins, rho, gamma, vt) <- checkPats 0 [] [] [] [] v pl
-  -- check inaccessible patterns
+  -- phase 2: check inaccessible patterns
   mapM_ (checkDot k rho gamma ins) flex
   -- check the right hand side (e)
   checkExpr k rho gamma rhs vt

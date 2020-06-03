@@ -32,7 +32,7 @@ checkPattern ::
   -> Substitution -- [(Int, Value)], (flex variable, its valuation)
   -> Env -- binding of variables to values
   -> Env -- binding of variables to their types
-  -> Value -- type of the expression
+  -> Value -- the remaining type of the function
   -> Pattern -- the pattern to check (variable/constructor/dot pattern)
   -- updated versions of the 6 inputs after a pattern is checked
   -> TypeCheck (Int, [(Int, (Expr, Value))], Substitution, Env, Env, Value)
@@ -47,12 +47,16 @@ checkPattern k flex ins rho gamma (VPi x av env b) (ConP n pl) = do
   -- updating the list of dot pattern and their types & substitutions
   (k', flex', ins', rho', gamma', vc') <- checkPats k flex ins rho gamma vc pl
   let flexgen = map fst flex'
-  sub <- inst k' flexgen vc' av -- instantiate flex variables
+  -- instantiate flex variables with unification,
+  -- the problem equation is {vc' = av}, sub is the solution
+  sub <- inst k' flexgen vc' av
+  -- convert the constructor pattern to a value (pv)
   let pv = patternToVal k (ConP n pl)
   vb <- eval (updateEnv env x pv) b
   -- composition of substitutions from checkPats and instantiated flex var
   ins'' <- compSubst ins' sub
-  vb' <- substVal ins'' vb -- substitute generic variable in value
+  vb' <- substVal ins'' vb
+  -- update the types with the instantiated values
   gamma'' <- substEnv ins'' gamma'
   return (k', flex', ins'', rho', gamma'', vb')
 checkPattern k flex ins rho gamma (VPi x av env b) (DotP e) = do
@@ -81,7 +85,7 @@ inst m flex v1 v2 =
         if noc
           then return [(k, v1)]
           else error "inst: occurs check failed"
-    (VApp (VDef d1) vl1, VApp (VDef d2) vl2) --
+    (VApp (VDef d1) vl1, VApp (VDef d2) vl2)
       | d1 == d2 -> instList m flex vl1 vl2
     (VApp (VCon c1) vl1, VApp (VCon c2) vl2)
       | c1 == c2 -> instList m flex vl1 vl2
@@ -192,7 +196,9 @@ checkDot k rho gamma subst (i, (e, tv)) =
       show tv <>
       ")). "
     Just v -> do
-      tv' <- substVal subst tv
+      tv' <- substVal subst tv -- applying the substitution
+      -- check that the dot pattern has the instantiated type/substution
       checkExpr k rho gamma e tv'
       v' <- eval rho e
+      -- check that the evaluated dot pattern equals to the type in the subst
       eqVal k v v'

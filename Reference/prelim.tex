@@ -528,11 +528,11 @@ Recall that a pattern is either a \emph{variable} pattern, a \emph{constructor} 
 
 We type-check the patterns in two phases. In the first phase, we skip \emph{inaccessible} patterns, and only check the accessible part of the patterns, i.e., the variable and the constructor patterns.
 
-The variable and inaccessible patterns are represented by fresh \emph{flexible} generic values. These flexible generic values are instantiated to concrete values when checking constructor patterns.
+The variable and inaccessible patterns are represented by fresh \emph{flexible} generic values. These flexible generic values are instantiated to concrete values in this phase.
 
 In the second phase, we verify that the expressions of the inaccessible patterns equal to those instantiated in the first phase.
 
-\textbf{The first phase}, done by the function $\boldsymbol{checkPattern}$, calls the following functions:
+\textbf{The first phase}, done by the function $\boldsymbol{checkPattern}$, calls the following functions when checking constructor patterns:
 
 \begin{enumerate}
   \item $\boldsymbol{patternToVal}$: Convert patterns to values. Variable patterns and inaccessible patterns are converted to \emph{flexible generic values}.
@@ -661,13 +661,61 @@ $checkPattern$ checks a pattern. It takes 7 arguments:
 
 \begin{enumerate}
   \item $k$, the next generic value.
-  \item a list of a pair of flexible variable and a pair of its dot pattern and type, of type [(Int, (Expr, Value))].
-  \item a substitution, of type [(Int, Value)], which is a list of flexible variables and their valuations).
+  \item $\xi$, a list of a pair of flexible variable and a pair of its dot pattern and type, of type $[(Int, (Expr, Value))]$.
+  \item substitution $\sigma$, of type $[(Int, Value)]$, which is a list of flexible variables and their valuations.
   \item environment $\rho$, which is a list of pairs of $n$ (variable name) and $k$ that binds a fresh generic value to a variable.
   \item environment $\Gamma$, which is a list of pairs of $n$ and $v$ that binds the type to a variable.
-  \item the type of the expression.
+  \item the remaining type of the function.
   \item the pattern to check.
 \end{enumerate}
 
-It returns the updated versions of the first 6 inputs.
+It returns the updated versions of the first 6 inputs. $\boldsymbol{cP}$ and $\boldsymbol{cPs}$ represent $checkPattern$ and $checkPats$ respectively:
 
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      \textrm{Variable pattern $\boldsymbol{y}$:}                                                                                                                                                   \\
+      cP \: k \: \xi \: \sigma \: \rho \: \Gamma \: (Pi \: x \: v_A \: B^{\rho}) \: y                    & = & ((k+1), \xi, \sigma, (\rho : (y,k)), (\Gamma : (y,v_A)), (eval \: B^{\rho : (x,k)})) \\
+      \textrm{Inaccessible pattern $\boldsymbol{\underline{e}}$:}                                                                                                                                   \\
+      cP \: k \: \xi \: \sigma \: \rho \: \Gamma \: (Pi \: x \: v_A \: B^{\rho}) \: \underline{e}        & = & ((k+1), (\xi : (k,(e,v_A))), \sigma, \rho, \Gamma, (eval \: B^{\rho : (x,k)}))       \\
+      \textrm{Constructor pattern $\boldsymbol{c \: (p_1 \dots p_n)}$:}                                                                                                                             \\
+      cP \: k \: \xi \: \sigma \: \rho \: \Gamma \: (Pi \: x \: v_A \: B^{\rho}) \: c \: (p_1 \dots p_n) & = & (k', \xi', \sigma'', \rho', \Gamma'', v_B)                                           \\
+      \textrm{ where }                                                                                   &   &                                                                                      \\
+      v_c                                                                                                & = & \Sigma c                                                                             \\
+      (k',\xi',\sigma',\rho',\Gamma',v_c')                                                               & = & cPs \: k \: \xi \: \sigma \: \rho \: \Gamma \: (p_1 \dots p_n) \: v_c                \\
+      \sigma_2                                                                                           & = & inst \: k' \: \xi' \: v_c' \: v_A                                                    \\
+      v_p                                                                                                & = & patternToVal \: k \: (c (p_1 \dots p_n))                                             \\
+      \sigma''                                                                                           & = & compSubst \: \sigma' \: \sigma_2                                                     \\
+      \Gamma''                                                                                           & = & substVal \: \sigma'' \: \Gamma'                                                      \\
+      v_B                                                                                                & = & substVal \: \sigma'' \: (eval B^{\rho : (x,v_p)})                                    \\
+    \end{aligned}
+  \end{equation*}
+  \caption{Type Checking Accessible Patterns}
+\end{figure}
+
+\textbf{The second phase} checks that the instantiated values of the inaccessible patterns equal to those instantiated in the first phase. The function $\boldsymbol{checkDot}$ performs this check. It takes 5 arguments:
+
+\begin{enumerate}
+  \item $k$, the next generic value.
+  \item environment $\rho$, which is a list of pairs of $n$ (variable name) and $k$ that binds a fresh generic value to a variable.
+  \item environment $\Gamma$, which is a list of pairs of $n$ and $v$ that binds the type to a variable.
+  \item substitution $\sigma$, of type $[(Int, Value)]$, which is a list of flexible variables and their valuations.
+  \item a pair of flexible variable and a pair of its dot pattern and type, of type $(Int, (Expr, Value))$.
+\end{enumerate}
+
+It returns a $unit$ if the check is successful. Otherwise, an error occurs.
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      checkDot \: k \: \rho \: \Gamma \: \sigma \: (i,(e,v)) & = & (i,v_i) \in \sigma \: \land                                                 \\
+                                                             &   & checkExpr \: k \: \rho \: \Gamma \: e \: (substVal \: \sigma \: v) \: \land \\
+                                                             &   & eqVal \: k \: (eval \: e^{\rho}) \: v_i                                     \\
+    \end{aligned}
+  \end{equation*}
+  \caption{Type Checking Inaccessible Patterns}
+\end{figure}
+
+\subsubsection{Type Checking the Right Hand Side}
+
+After the patterns are checked, the type and environments obtained from checking the left hand side are used to check against the right hand side expression. See $\boldsymbol{checkClause}$ in $CheckFunction.hs$.
