@@ -75,8 +75,9 @@ spos k a (VApp (VDef m) vl) = do
     (DataSig p pos _ _) -> do
       let (pparams, nparams) = posArgs vl pos -- pos proven in sposConstructor
       let rest = drop p vl
-      sl <- mapM (spos k a) pparams -- D must occur strictly pos in pos arg
-      -- D must not occur in not strictly positive arg
+      -- D must occur strictly pos in pos parameters
+      sl <- mapM (spos k a) pparams
+      -- D must not occur in not strictly positive parameters
       nl <- mapM (nonOccur k a) (nparams <> rest)
       return $ and sl && and nl
     _ -> do

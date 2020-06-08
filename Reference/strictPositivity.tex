@@ -29,7 +29,7 @@ One can see from $\Delta_1$ that the data type $Bad$ is an argument to the funct
 
 $bad$ takes in a function $f$ with the type $Bad \to Bad$. Thus $bad \: f$ has type $Bad$. Because the return type of $(getFun \: f)$ is $(Bad \to Bad)$, $(getFun \: f) \: f$ has the return type of $Bad$. All these functions have proper types. Allowing non-strictly positive constructors allows $loop$, which infinitely loops.
 
-In short, the strict positivity check ensures that the data type to be defined cannot occur in its constructor's arguments' function domain or in an application.
+In short, the strict positivity check (see $\boldsymbol{SPos.hs}$) ensures that the data type to be defined cannot occur in its constructor's arguments' function domain or in an application.
 
 \subsection{Positive Parameters}
 

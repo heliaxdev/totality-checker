@@ -65,10 +65,31 @@ for checking the patterns of a function cover all cases in section
 \section{Termination Checks}
 \label{sec:termination}
 
+The type checker as is catches invalid expressions (by type checking) and data declarations that enable non-terminating functions (by checking strict positivity). However, one can still declare functions that infinitely loop. For example, the function declaration
+
+\begin{lstlisting}[language=haskell]
+  foo :: Nat -> Nat
+  foo x = foo x
+\end{lstlisting}
+
+passes the type checker, although $foo$ is not well defined.
+
+The termination checker (see $\boldsymbol{Termination.hs}$) aims to alleviate the problem in two ways:
+
+\begin{enumerate}
+  \item Analyzing the syntax of the program using the size-change principle (section \ref{sec:synTermination}).
+  \item Analyzing the type validity using \emph{sized types} (section \ref{sec:typeTermination}).
+\end{enumerate}
+
 \subsection{Syntactic Checks}
+\label{sec:synTermination}
+
+\input{synTermination.tex}
 
 \subsection{Type-based Checks}
+\label{sec:typeTermination}
 
 \section{Pattern Matching Coverage Checks}
 \label{sec:pattern}
+
 \end{document}

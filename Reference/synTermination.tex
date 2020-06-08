@@ -1,0 +1,15 @@
+The size-change principle states that \emph{a program terminates on all inputs if every infinite call sequence would cause an infinite descent in some data values.}
+
+In order to determine whether a program terminates, we need to know how the size of the \emph{semantical} values change during evaluation of a recursion. If the expression of the arguments from a recursive call ($e$) is \emph{semantically smaller} than the patterns on the right hand side ($p$), then it passes this part of the termination checker.
+
+\subsubsection{Order}
+
+An \emph{order} is a set that denotes the possible results when comparing an expression $e$ to a pattern $p$.
+
+$e$ is either
+
+\begin{enumerate}
+  \item \emph{smaller than} $p$ ($\boldsymbol{<}$),
+  \item \emph{smaller than or equal to} $p$ ($\boldsymbol{\leq}$),
+  \item or its relation to $p$ is \emph{unknown} ($\boldsymbol{?}$).
+\end{enumerate}
