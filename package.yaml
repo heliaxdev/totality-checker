@@ -4,7 +4,7 @@ github:              "thealmarty/totality-checker"
 license:             GPL-3
 author:              "Marty Stumpf"
 maintainer:          "thealmartyblog@gmail.com"
-copyright:           "2020 Marty Stumpf; 2020 Cryptium Labs"
+copyright:           "2020 Marty Stumpf; 2020 Metastate"
 
 extra-source-files:
 - README.md
@@ -19,6 +19,8 @@ dependencies:
 - containers
 - HUnit
 - HUnit-Plus
+- semiring-simple
+- matrix
 
 default-extensions:
   - DeriveGeneric
