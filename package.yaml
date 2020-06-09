@@ -19,7 +19,7 @@ dependencies:
 - containers
 - HUnit
 - HUnit-Plus
-- semiring-simple
+- semirings
 - matrix
 
 default-extensions:

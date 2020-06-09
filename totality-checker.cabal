@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8e7e0de2ef3cf9bf3cb5fb38728450a6829a52a1803c0bba2978c5cbccedd8c5
+-- hash: 6356fe30a49ce82133769105b2e503f0a1e83471f8cac1646e194ef4adee8b33
 
 name:           totality-checker
 version:        0.1.0.0
@@ -49,7 +49,7 @@ library
     , containers
     , matrix
     , mtl
-    , semiring-simple
+    , semirings
   default-language: Haskell2010
 
 executable totality-checker-exe
@@ -68,7 +68,7 @@ executable totality-checker-exe
     , containers
     , matrix
     , mtl
-    , semiring-simple
+    , semirings
     , totality-checker
   default-language: Haskell2010
 
@@ -89,6 +89,6 @@ test-suite totality-checker-test
     , containers
     , matrix
     , mtl
-    , semiring-simple
+    , semirings
     , totality-checker
   default-language: Haskell2010
