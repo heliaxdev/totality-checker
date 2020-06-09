@@ -21,6 +21,7 @@ dependencies:
 - HUnit-Plus
 - semirings
 - matrix
+- vector
 
 default-extensions:
   - DeriveGeneric

@@ -81,6 +81,8 @@ The termination checker (see $\boldsymbol{Termination.hs}$) aims to alleviate th
   \item Analyzing the type validity using \emph{sized types} (section \ref{sec:typeTermination}).
 \end{enumerate}
 
+Alan Turing proved that a general algorithm to solve the halting problem for all possible program-input pairs cannot exist. Therefore, the termination checker can only reject a subset of cases that do not terminate. Cases that it accepts could still not terminate.
+
 \subsection{Syntactic Checks}
 \label{sec:synTermination}
 
