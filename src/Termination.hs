@@ -10,6 +10,7 @@ arity :: Clause -> Int
 arity (Clause pl _) = length pl
 
 -- order = {<,≤,?} when comparing an expression e to a pattern p
+-- ? is the min, < is the max
 data Order
   = Lt -- less than
   | Le -- less than or equal to
@@ -21,46 +22,57 @@ instance Semiring Order where
   zero = Un
   one = Le
   -- plus is also the order maximum function
-  plus _ Lt  = Lt
-  plus Lt _  = Lt
-  plus Un x  = x
-  plus x Un  = x
+  plus _ Lt = Lt
+  plus Lt _ = Lt
+  plus Un x = x
+  plus x Un = x
   plus Le Le = Le
-  times Lt Un      = Un
-  times Lt _       = Lt
-  times Le o       = o
-  times Un _       = Un
+  plus (Mat m1) (Mat m2) =
+    if sameSizeMat m1 m2
+      then Mat $ elementwise plus m1 m2
+      else plus (collapse m1) (collapse m2)
+  plus (Mat m) x = plus (collapse m) x
+  plus x (Mat m) = plus x (collapse m)
+  times Lt Un = Un
+  times Lt (Mat m) = times Lt (collapse m)
+  times Lt _ = Lt
+  times Le o = o
+  times Un _ = Un
+  times (Mat m1) (Mat m2) =
+    if sameSizeMat m1 m2
+      then Mat $ elementwise times m1 m2
+      else times (collapse m1) (collapse m2)
   times (Mat m) Le = Mat m
   times (Mat m) Un = Un
   times (Mat m) Lt = times (collapse m) Lt
 
+sameSizeMat :: Matrix Order -> Matrix Order -> Bool
+sameSizeMat m1 m2 = ncols m1 == ncols m2 && nrows m1 == nrows m2
+
 -- returns the minimum of the input orders
-orderMin :: Order -> Order -> Order
-orderMin Un _ = Un
-orderMin _ Un = Un
-orderMin Lt o2 = o2
-orderMin o1 Lt = o1
-orderMin Le Le = Le
-orderMin (Mat m1) (Mat m2) =
-  if ncols m1 == ncols m2
-    then Mat $ minM m1 m2
-    else orderMin (collapse m1) (collapse m2)
-orderMin (Mat m1) o2 = orderMin (collapse m1) o2
-orderMin o1 (Mat m2) = orderMin o1 (collapse m2)
+minOrder :: Order -> Order -> Order
+minOrder Un _ = Un
+minOrder _ Un = Un
+minOrder Lt o2 = o2
+minOrder o1 Lt = o1
+minOrder Le Le = Le
+minOrder (Mat m1) (Mat m2) =
+  if sameSizeMat m1 m2
+    then Mat $ elementwiseUnsafe minOrder m1 m2
+    else minOrder (collapse m1) (collapse m2)
+minOrder (Mat m1) o2 = minOrder (collapse m1) o2
+minOrder o1 (Mat m2) = minOrder o1 (collapse m2)
 
 collapse :: Matrix Order -> Order
-collapse m = minL (getDiag m)
+collapse m = minL (V.toList (getDiag m))
 
 -- returns the max order of a list
-maxL :: V.Vector Order -> Order
-maxL = V.foldl1 plus
+maxL :: [Order] -> Order
+maxL = foldl1 plus
 
 -- returns the min order of a list
-minL :: V.Vector Order -> Order
-minL = V.foldl1 orderMin
-
-minM :: Matrix Order -> Matrix Order -> Matrix Order
-minM = undefined
+minL :: [Order] -> Order
+minL = foldl1 minOrder
 
 exprToPattern :: Expr -> Maybe Pattern
 exprToPattern (Var n) = Just $ VarP n
@@ -105,23 +117,20 @@ compareExpr (App (Con n1) [e1]) (ConP n2 [p1]) =
     else Un
 compareExpr (App (Con n1) args) (ConP n2 pl) =
   if n1 == n2 && length args == length pl
-    then undefined -- TODO Mat (V.map (\e -> (map (compareExpr e) pl)) (V.fromList args))
+    then minL $ concatMap (\e -> (map (compareExpr e) pl)) args
     else Un
 compareExpr (Succ e2) (SuccP p2) = compareExpr e2 p2
 compareExpr _ _ = Un
 
 compareVar :: Name -> Pattern -> Order
-compareVar n p =
-  case p of
-    VarP n2 ->
-      if n == n2
-        then Le
-        else Un
-    ConP c (p:pl) ->
-      times Lt (maxL (V.map (compareVar n) (V.fromList (p : pl))))
-    SuccP p2 -> times Lt (compareVar n p2)
-    DotP e ->
-      case (exprToPattern e) of
-        Nothing -> Un
-        Just p' -> compareVar n p'
-    _ -> Un
+compareVar n (VarP n2) =
+  if n == n2
+    then Le
+    else Un
+compareVar n (ConP c (p:pl)) = times Lt (maxL (map (compareVar n) (p : pl)))
+compareVar n (SuccP p2) = times Lt (compareVar n p2)
+compareVar n (DotP e) =
+  case exprToPattern e of
+    Nothing -> Un
+    Just p' -> compareVar n p'
+compareVar n _ = Un
