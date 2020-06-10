@@ -5,10 +5,6 @@ import           Data.Semiring
 import qualified Data.Vector   as V
 import           Types
 
--- arity of a clause. All clauses of a function should have the same arity.
-arity :: Clause -> Int
-arity (Clause pl _) = length pl
-
 -- order = {<,≤,?} when comparing an expression e to a pattern p
 -- ? is the min, < is the max
 data Order
@@ -135,3 +131,22 @@ compareVar n (DotP e) =
     Nothing -> Un
     Just p' -> compareVar n p'
 compareVar n _ = Un
+
+data Call =
+  Call
+    { source :: Name -- Name of calling function f where f (p1 ...) = e
+    , target :: Name -- Name of called function g, g (e1...) is a call in e
+    , matrix :: Matrix Order -- the orders of e's and p's
+    -- the rows represent the input parameters of the calling function
+    -- and the columns the arguments of the called function.
+    -- A “<” in cell (i, j) of a call matrix expresses that
+    -- the j argument of the call is
+    -- strictly smaller than the ith parameter of the calling function,
+    -- a “≤” denotes weak decrease
+    -- and a “?” stands for increase or absence of information
+    }
+  deriving (Eq, Show)
+
+-- arity of a clause. All clauses of a function should have the same arity.
+arity :: Clause -> Int
+arity (Clause pl _) = length pl

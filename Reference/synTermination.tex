@@ -21,3 +21,18 @@ The order is determined by the following axioms:
   \item $f \: (e_1 \dots e_n) \leq f$
 \end{enumerate}
 
+The call matrix:
+%TODO
+The rows represent the input parameters of the calling function and the columns the arguments of the called function.
+For example, a $\boldsymbol{<}$ in cell $(i, j)$ of a call matrix expresses that the $j$'th argument of the call is strictly smaller than the $i$'th parameter of the calling function.
+%TODO put call matrix in fig
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      f \: (p_{11} \dots p_{1n}) = e_1 \\
+      \dots                            \\
+      f \: (p_{m1} \dots p_{mn}) = e_m \\
+    \end{aligned}
+  \end{equation*}
+  \caption{Function $f$ and its Call Matrix}
+\end{figure}
