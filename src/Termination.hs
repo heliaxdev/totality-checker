@@ -21,7 +21,7 @@ data Order
 instance Semiring Order where
   zero = Un
   one = Le
-  -- plus is also the order maximum function
+  -- addition or parallel composition or the order maximum function
   plus _ Lt = Lt
   plus Lt _ = Lt
   plus Un x = x
@@ -33,6 +33,7 @@ instance Semiring Order where
       else plus (collapse m1) (collapse m2)
   plus (Mat m) x = plus (collapse m) x
   plus x (Mat m) = plus x (collapse m)
+  -- multiplication or serial composition
   times Lt Un = Un
   times Lt (Mat m) = times Lt (collapse m)
   times Lt _ = Lt
