@@ -1,8 +1,7 @@
 module CheckExpr where
 
-import           Control.Monad.Except
-import           Control.Monad.State
-import           Evaluator
+import Control.Monad.State ( MonadState(get) )
+import Evaluator ( eqVal, eval, lookupEnv, updateEnv )
 import           Prelude
 import           Types
 

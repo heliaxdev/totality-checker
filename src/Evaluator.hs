@@ -1,6 +1,6 @@
 module Evaluator where
 
-import           Control.Monad.State
+import Control.Monad.State ( MonadState(get) )
 import           Types
 
 -- Evaluation of a closure (expression, env) to a value

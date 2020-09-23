@@ -1,9 +1,9 @@
 module CheckDataType where
 
-import           CheckExpr
-import           Control.Monad.State
-import           Evaluator
-import           SPos
+import CheckExpr ( checkExpr, checkType, checkSType )
+import Control.Monad.State ( MonadState(put, get) )
+import Evaluator ( eval, updateEnv )
+import SPos ( sposConstructor )
 import           Types
 
 typeCheckConstructor ::
@@ -73,7 +73,9 @@ checkConType k rho gamma p e =
         (updateEnv gamma x v_t1)
         p
         t2
-    _ -> checkExpr k rho gamma e VStar -- the constructor's type is of type Star(the same type as the data type).
+    -- the constructor's type is of type Star(the same type as the data type).
+    _ -> checkExpr k rho gamma e VStar 
+    
 
 -- check that the data type and the parameter arguments
 -- are written down like declared in telescope
@@ -116,6 +118,8 @@ checkParams tel@((n, _t):tl) (Var n':el) =
          show n <> -- using show to wrap n with "
          ", which does not match the input expression's variable name: " <>
          show n'
-checkParams _ _ =
-  error
-    "checkParams: target parameter mismatch. The input expression isn't a variable (Var)."
+checkParams _ exps =
+  error $
+    "checkParams: target parameter mismatch. The input expression"
+    <> show exps
+    <> "isn't a variable (Var)."

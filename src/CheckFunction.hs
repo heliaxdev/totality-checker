@@ -4,7 +4,7 @@ import           CheckExpr           (checkExpr)
 import           Control.Monad       (zipWithM_)
 import           Control.Monad.State (get, put)
 import           Evaluator           (eval)
-import           Pattern
+import Pattern ( checkDot, checkPats )
 import           Types
 
 -- check a list of functions

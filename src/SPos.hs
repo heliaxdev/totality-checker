@@ -1,7 +1,7 @@
 module SPos where
 
-import           Control.Monad.State
-import           Evaluator
+import Control.Monad.State ( MonadState(get) )
+import Evaluator ( eval, updateEnv )
 import           Types
 
 -- to check data type declarations, one has to check that

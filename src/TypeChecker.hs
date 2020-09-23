@@ -1,8 +1,9 @@
 module TypeChecker where
 
-import           CheckDataType
-import           CheckFunction
-import           Control.Monad.State
+import CheckDataType
+    ( typeCheckConstructor, teleToType, checkDataType )
+import CheckFunction ( typeCheckFuns )
+import Control.Monad.State ( MonadState(put, get) )
 import           Evaluator
 import           Prelude
 import           Types

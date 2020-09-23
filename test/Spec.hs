@@ -1,9 +1,9 @@
 import           CheckDataType
-import           CheckExpr
-import           Control.Exception
-import           Control.Monad.State.Lazy
+import CheckExpr ()
+import Control.Exception ( ErrorCall(ErrorCall) )
+import Control.Monad.State.Lazy ( evalStateT )
 import qualified Test.HUnit               as T
-import           Test.HUnitPlus.Base      as TP
+import Test.HUnitPlus.Base as TP ( assertThrowsExact )
 import           Types
 
 testTarget :: Name -> Telescope -> Expr -> T.Test
@@ -41,6 +41,7 @@ testDataTypeErr k rho gamma p e =
        (ErrorCall "")
        (evalStateT (checkDataType k rho gamma p e) emptySig))
 
+testTargetList :: T.Test
 testTargetList =
   T.TestList
     -- a definition matches its name
@@ -59,16 +60,18 @@ testTargetList =
         (testTargetErr "name" [("var", Star)] (App (Def "name") [Var "notVar"]))
     ]
 
+testDataTypeList :: T.Test
 testDataTypeList =
   T.TestList
     [ T.TestLabel "testDataTypeStar" (testDataType 0 [] [] 0 Star)
     , T.TestLabel "testDataTypeConErr" (testDataTypeErr 0 [] [] 0 (Con "con"))
     ]
 
+main :: IO ()
 main = do
   putStrLn ""
   putStrLn "checkTarget tests:"
-  T.runTestTT testTargetList
+  _ <- T.runTestTT testTargetList
   putStrLn "checkDataType tests:"
-  T.runTestTT testDataTypeList
+  _ <- T.runTestTT testDataTypeList
   return ()

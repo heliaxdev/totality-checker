@@ -2,7 +2,7 @@ module Pattern where
 
 import           CheckExpr           (checkExpr)
 import           Control.Monad.State (get)
-import           Evaluator
+import Evaluator ( eqVal, eval, updateEnv )
 import           SPos                (nonOccur)
 import           Types
 
@@ -65,7 +65,7 @@ checkPattern k flex ins rho gamma (VPi x av env b) (DotP e) = do
 checkPattern _k _flex _ins _rho _gamma v _ =
   error $ "checkPattern: " <> show v <> " should be a dependent function."
 
--- match v1 against v2 by unification, yielding a substition
+-- match v1 against v2 by unification, yielding a substitution
 -- If v1 is a flexible variable and v2 is a term not containing v1
 -- we can instantiate v1 to v2, vice versa.
 inst :: Int -> [Int] -> Value -> Value -> TypeCheck Substitution
@@ -75,7 +75,7 @@ inst m flex v1 v2 =
     -- the problem equation is {k = v2}
       | k `elem` flex -- if k is a dot pattern
        -> do
-        noc <- nonOccur m v1 v2 -- check for non-occurence
+        noc <- nonOccur m v1 v2 -- check for non-occurrence
         if noc -- if k is not in v2
           then return [(k, v2)] -- {k ↦ v2}
           else error "inst: occurs check failed"
@@ -197,7 +197,7 @@ checkDot k rho gamma subst (i, (e, tv)) =
       ")). "
     Just v -> do
       tv' <- substVal subst tv -- applying the substitution
-      -- check that the dot pattern has the instantiated type/substution
+      -- check that the dot pattern has the instantiated type/substitution
       checkExpr k rho gamma e tv'
       v' <- eval rho e
       -- check that the evaluated dot pattern equals to the type in the subst

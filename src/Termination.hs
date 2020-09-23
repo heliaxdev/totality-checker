@@ -1,7 +1,8 @@
 module Termination where
 
-import           Data.Matrix
-import           Data.Semiring
+import Data.Matrix
+    ( elementwise, elementwiseUnsafe, getDiag, Matrix(..) )
+import Data.Semiring ( Semiring(..) )
 import qualified Data.Vector   as V
 import           Types
 
@@ -40,7 +41,7 @@ instance Semiring Order where
       then Mat $ elementwise times m1 m2
       else times (collapse m1) (collapse m2)
   times (Mat m) Le = Mat m
-  times (Mat m) Un = Un
+  times (Mat _m) Un = Un
   times (Mat m) Lt = times (collapse m) Lt
 
 sameSizeMat :: Matrix Order -> Matrix Order -> Bool
@@ -124,13 +125,13 @@ compareVar n (VarP n2) =
   if n == n2
     then Le
     else Un
-compareVar n (ConP c (p:pl)) = times Lt (maxL (map (compareVar n) (p : pl)))
+compareVar n (ConP _c (p:pl)) = times Lt (maxL (map (compareVar n) (p : pl)))
 compareVar n (SuccP p2) = times Lt (compareVar n p2)
 compareVar n (DotP e) =
   case exprToPattern e of
     Nothing -> Un
     Just p' -> compareVar n p'
-compareVar n _ = Un
+compareVar _n _ = Un
 
 data Call =
   Call

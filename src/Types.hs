@@ -1,6 +1,6 @@
 module Types where
 
-import           Control.Monad.State
+import Control.Monad.State ( StateT )
 import qualified Data.Map            as Map
 
 data Expr
