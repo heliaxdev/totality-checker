@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 117b723f71b2407e9988d7435968ce728203cddf0f54c1bd8c3995a388ae98e4
+-- hash: d332f74f52e664d491f6bca21f72b3a2df1a63f5bade6d7a40c31c3a9209cccd
 
 name:           totality-checker
 version:        0.1.0.0
@@ -30,6 +30,7 @@ library
       CheckDataType
       CheckExpr
       CheckFunction
+      DecisionTrees
       Evaluator
       Pattern
       SPos
