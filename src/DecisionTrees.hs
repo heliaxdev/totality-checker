@@ -2,8 +2,9 @@ module DecisionTrees where
 -- compiling function definitions with pattern matching to case trees
 -- inspired by 
 -- `Compiling Pattern Matching to Good Decision Trees` by Luc Maranget
-import Types (Pattern,  Value )
-import Data.Matrix
+import Types (Pattern(WildCardP), Value )
+import Data.Matrix ( Matrix(nrows, ncols), getRow )
+import qualified Data.Vector as V (Vector, notElem, map)
 
 -- matrices of clauses: P -> A, where P is the pattern matrices.
 -- matrix decomposition operations: 
@@ -26,7 +27,7 @@ data Occurrence
 -- decision trees:
 
 data DTree
-  = Leaf Int -- success (k is an action)
+  = Leaf Int -- success (k is an action) TODO transform b/t k and A?
   | Fail -- failure
   | Switch Occurrence [(Value, DTree)] -- multi-way test
   -- switch case lists are non-empty lists [(constructor, DTree)],
@@ -34,6 +35,29 @@ data DTree
 
 -- compilation scheme, takes 
 -- (1) a vector of occurrences, oV
--- (2) a clause matrix, clauseM
-cc :: [Occurrence] -> (Matrix Pattern -> [Value]) -> DTree
-cc = undefined
+-- (2) a clause matrix, (P->A)
+-- returns a DTree
+cc :: 
+  -- defines the fringe (the subterms of the subject value that  
+  -- need to be checked against the patterns of P to decide matching)
+  V.Vector Occurrence 
+  -> Matrix Pattern -- pattern matrix P
+  -> V.Vector Value -- rhs values valuesV
+  -> DTree
+cc oV pMatrix valuesV
+  | nrows pMatrix == 0 = Fail -- if there's no pattern to match it fails.
+  | ncols pMatrix == 0 || -- if the number of column is 0 or
+  -- if the first row of P has all wildcards 
+    V.notElem 
+      False 
+      (V.map (== WildCardP) (getRow 1 pMatrix)) 
+        = Leaf 1 -- then the first action is yielded.
+  | otherwise = -- P has at least one row and at least one column and 
+  -- in the first row, at least one pattern is not a wild card
+      compiles oV pMatrix valuesV
+
+compiles :: V.Vector Occurrence 
+  -> Matrix Pattern -- pattern matrix P
+  -> V.Vector Value -- rhs values valuesV
+  -> DTree
+compiles oV pMatrix valuesV = undefined

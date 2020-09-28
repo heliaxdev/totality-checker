@@ -119,7 +119,8 @@ data Clause =
   deriving (Eq, Show)
 
 data Pattern
-  = VarP Name -- variable pattern
+  = WildCardP -- wild card pattern
+  | VarP Name -- variable pattern
   | ConP Name [Pattern] -- constructor pattern
   | DotP Expr -- inaccessible pattern
   | SuccP Pattern -- size successor pattern

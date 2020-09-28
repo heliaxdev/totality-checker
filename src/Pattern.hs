@@ -158,6 +158,7 @@ patternToVal k p = fst (p2v k p)
 p2v :: Int -> Pattern -> (Value, Int)
 p2v k p =
   case p of
+    WildCardP -> (VGen k, k + 1) -- wild card pats are var pats without a name.
     VarP _p -> (VGen k, k + 1) -- var patterns are converted to flex k's.
     -- con patterns with an empty list of patterns are just Con.
     ConP n [] -> (VCon n, k)
