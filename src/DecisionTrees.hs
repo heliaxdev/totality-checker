@@ -8,11 +8,15 @@ import qualified Data.Vector as V --(Vector, notElem, map, head)
 
 -- matrices of clauses: P -> A, where P is the pattern matrices. A is the rhs.
 data ClauseMatrix
-  = MkClauseMatrix (Matrix Pattern) (V.Vector Value)
+  = MkEmptyC
+  | MkClauseMatrix (Matrix Pattern) (V.Vector Value)
 
+-- vertically joins 2 clause matrices
 vJoin :: ClauseMatrix -> ClauseMatrix -> ClauseMatrix
 vJoin (MkClauseMatrix p1 v1) (MkClauseMatrix p2 v2) =
   MkClauseMatrix ((<->) p1 p2) (v1 V.++ v2)
+vJoin MkEmptyC c = c
+vJoin c MkEmptyC = c
 
 -- matrix decomposition operations: 
 -- (1) specialization by a constructor c, S(c,P->A) 
@@ -26,21 +30,31 @@ specialC ::
   -> ClauseMatrix -- the clause matrix to be transformed
   -- output is a matrix with some rows erased and some cols added
   -> ClauseMatrix
-specialC c@(ConP name listP) i clauseM@(MkClauseMatrix p v) =
-  let firstRow = getRow i p in -- currently building the i-th row 
-  case V.head firstRow of
-    WildCardP -> -- when p_1^j is a wild card, add wild card cols to the row
-      let wildCardCols = 
-            -- the no. of cols to add equals the no. of constructor args
-            V.generate (length listP) (const WildCardP)
+specialC c@(ConP name listP) i clauseM@(MkClauseMatrix p v) 
+  | i == nrows p = MkEmptyC
+  | otherwise =
+      let firstRow = getRow i p -- currently building the i-th row 
           dropped1Col = -- drop the first col of the original row
-            V.slice 2 (ncols p - 1) firstRow
+            V.tail firstRow
+          makeCols = V.replicate (length listP)
+          returnClause v1 =
+            vJoin 
+              (MkClauseMatrix (rowVector (v1 V.++ dropped1Col)) (V.slice i 1 v))
+              (specialC c (i+1) clauseM)
       in
-        vJoin 
-          (MkClauseMatrix (rowVector (wildCardCols V.++ dropped1Col)) (V.take i v))
-          (specialC c (i+1) clauseM) -- TODO i needs to be less than nrows p
-    (ConP nameC listPat) -> undefined
-    _ -> undefined
+      case V.head firstRow of
+        WildCardP -> 
+          -- when p_1^j is a wild card, add wild card cols to the row
+          -- the no. of cols to add equals the no. of constructor args
+          returnClause (makeCols WildCardP)
+        (ConP nameC listPat) 
+          -- when the constructor names are not the same, no row
+          | nameC /= name -> MkEmptyC
+          | otherwise -> -- when the constructor names are the same
+              -- add the constructor argument cols in front
+              returnClause (V.fromList listPat)
+        VarP nameV -> returnClause (makeCols $ VarP nameV)
+        _ -> undefined
 
 
 -- the default matrix retains the rows of P whose first pattern p_1^j admits all
