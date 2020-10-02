@@ -33,33 +33,52 @@ specialC ::
 specialC c@(ConP name listP) i clauseM@(MkClauseMatrix p v) 
   | i == nrows p = MkEmptyC
   | otherwise =
-      let firstRow = getRow i p -- currently building the i-th row 
-          dropped1Col = -- drop the first col of the original row
-            V.tail firstRow
-          makeCols = V.replicate (length listP)
+      let makeCols = V.replicate (length listP)
+          currentRow = getRow i p
+          drop1Col = V.tail currentRow
+          recurse = specialC c (i+1) clauseM
           returnClause v1 =
             vJoin 
-              (MkClauseMatrix (rowVector (v1 V.++ dropped1Col)) (V.slice i 1 v))
-              (specialC c (i+1) clauseM)
+              (MkClauseMatrix (rowVector (v1 V.++ drop1Col)) (V.slice i 1 v))
+              recurse
       in
-      case V.head firstRow of
+      case V.head currentRow of
         WildCardP -> 
           -- when p_1^j is a wild card, add wild card cols to the row
           -- the no. of cols to add equals the no. of constructor args
           returnClause (makeCols WildCardP)
         (ConP nameC listPat) 
           -- when the constructor names are not the same, no row
-          | nameC /= name -> MkEmptyC
+          | nameC /= name -> 
+              vJoin
+                MkEmptyC
+                recurse
           | otherwise -> -- when the constructor names are the same
               -- add the constructor argument cols in front
               returnClause (V.fromList listPat)
         VarP nameV -> returnClause (makeCols $ VarP nameV)
         _ -> undefined
+specialC _c _i MkEmptyC = MkEmptyC
+specialC _c _i _ = undefined
 
 
 -- the default matrix retains the rows of P whose first pattern p_1^j admits all
 -- values c'(v1,...va) as instances, where constructor c' is not present in the
 -- first column of P.
+defaultMatrix :: ClauseMatrix -> Int -> ClauseMatrix
+defaultMatrix clauseM@(MkClauseMatrix p v) i
+  | i == nrows p = MkEmptyC
+  | otherwise =
+      let recurse = defaultMatrix clauseM (i+1)
+      in
+      case V.head (getRow i p) of
+          WildCardP -> 
+            vJoin 
+              (MkClauseMatrix (rowVector (V.tail (getRow i p))) (V.slice i 1 v))
+              recurse
+          ConP _ _ -> vJoin MkEmptyC recurse
+          _ -> undefined
+defaultMatrix MkEmptyC _i = MkEmptyC
 
 -- occurrences, sequences of integers that describe the positions of subterms.
 data Occurrence
@@ -86,8 +105,8 @@ cc ::
   V.Vector Occurrence 
   -> ClauseMatrix
   -> DTree
+cc _oV MkEmptyC = Fail -- if there's no pattern to match it fails.
 cc oV (MkClauseMatrix p a)
-  | nrows p == 0 = Fail -- if there's no pattern to match it fails.
   | ncols p == 0 || -- if the number of column is 0 or
   -- if the first row of P has all wildcards 
     V.notElem 
@@ -101,4 +120,5 @@ cc oV (MkClauseMatrix p a)
 compiles :: V.Vector Occurrence 
   -> ClauseMatrix
   -> DTree
+compiles _oV MkEmptyC = Fail
 compiles oV (MkClauseMatrix p a) = undefined
