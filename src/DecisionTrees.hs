@@ -33,11 +33,13 @@ errorMsg pat =
 -- specialization by constructor c simplifies matrix P under the assumption that
 -- v1 admits c as a head constructor. (See p.3 of paper)
 specialC :: 
-  Pattern -- specialization by this constructor (c)
+  Pattern -- specialization by this constructor (c), aka the head constructor
   -> Int -- the row to be checked
   -> ClauseMatrix -- the clause matrix to be transformed
   -- output is a matrix with some rows erased and some cols added
   -> ClauseMatrix
+-- when the input clause matrix is empty, the specialized matrix is empty.
+specialC _c _i MkEmptyC = MkEmptyC
 specialC c@(ConP name listP) i clauseM@(MkClauseMatrix p v) 
   | i == nrows p = MkEmptyC
   | otherwise =
@@ -67,11 +69,13 @@ specialC c@(ConP name listP) i clauseM@(MkClauseMatrix p v)
               returnClause (V.fromList listPat)
         others ->
           errorMsg others
--- when the input clause matrix is empty, the specialized matrix is empty.
-specialC _c _i MkEmptyC = MkEmptyC
-specialC notC _i _ =
-  error $ show notC
-    <> "\n is not a constructor pattern. Cannot specialize." 
+-- when the head constructor is a variable/wild card, the specialized matrix is empty.
+specialC WildCardP _i _clauseMatrix = MkEmptyC
+specialC (VarP _name) _i _clauseMatrix = MkEmptyC
+specialC notVC _i _ =
+  error $ "DecisionTrees, specialC: \n" 
+    <> show notVC
+    <> "\n is not a variable/constructor pattern. Cannot specialize." 
 
 -- the default matrix retains the rows of P whose first pattern p_1^j admits all
 -- values c'(v1,...va) as instances, where constructor c' is not present in the
@@ -109,7 +113,7 @@ data Occurrence
 data DTree
   = Leaf Int -- success (k is an action) TODO transform b/t k and A?
   | Fail -- failure
-  | Switch Occurrence [(Value, DTree)] -- multi-way test
+  | Switch Occurrence [(Pattern, DTree)] -- multi-way test
   -- switch case lists are non-empty lists [(constructor, DTree)],
   | Swap Int DTree -- control instructions for evaluating decision trees
 
@@ -124,7 +128,7 @@ cc ::
   -> ClauseMatrix
   -> DTree
 cc _oV MkEmptyC = Fail -- if there's no pattern to match it fails.
-cc oV (MkClauseMatrix p a)
+cc oV clauseM@(MkClauseMatrix p _a)
   | ncols p == 0 || -- if the number of column is 0 or
   -- if the first row of P has all wildcards 
     V.notElem 
@@ -133,4 +137,20 @@ cc oV (MkClauseMatrix p a)
         = Leaf 1 -- then the first action is yielded.
   | otherwise = -- P has at least one row and at least one column and 
   -- in the first row, at least one pattern is not a wild card
-      undefined
+  -- when i = 1
+      let firstCol = getCol 1 p 
+      in
+        Switch 
+          (V.head oV) -- TODO is this the right occurrence?
+          (V.toList $
+            V.map 
+              (\e -> 
+                -- map each constructor to a pair of head constr (HC) and
+                -- a decision tree of the specialized clause matrix of the HC 
+                (e, cc oV (specialC e 1 clauseM)) -- TODO get the oV correct
+              ) 
+              firstCol
+          )
+  -- TODO add the case when i /= 1, which returns Swap
+
+
