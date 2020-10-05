@@ -22,6 +22,14 @@ vJoin c MkEmptyC = c
 -- (1) specialization by a constructor c, S(c,P->A) 
 -- (2) computation of the default matrix, D(P->A)
 
+errorMsg :: Show a1 => a1 -> a2
+errorMsg pat =
+  error $ 
+    "DecisionTrees, specialC: \n" 
+    <> show pat
+    <> "\n is not a valid pattern to match." 
+    <> " Expecting a wild card, variable or constructor patterns." 
+
 -- specialization by constructor c simplifies matrix P under the assumption that
 -- v1 admits c as a head constructor. (See p.3 of paper)
 specialC :: 
@@ -47,6 +55,7 @@ specialC c@(ConP name listP) i clauseM@(MkClauseMatrix p v)
           -- when p_1^j is a wild card, add wild card cols to the row
           -- the no. of cols to add equals the no. of constructor args
           returnClause (makeCols WildCardP)
+        VarP nameV -> returnClause (makeCols $ VarP nameV)
         (ConP nameC listPat) 
           -- when the constructor names are not the same, no row
           | nameC /= name -> 
@@ -56,28 +65,37 @@ specialC c@(ConP name listP) i clauseM@(MkClauseMatrix p v)
           | otherwise -> -- when the constructor names are the same
               -- add the constructor argument cols in front
               returnClause (V.fromList listPat)
-        VarP nameV -> returnClause (makeCols $ VarP nameV)
-        _ -> undefined
+        others ->
+          errorMsg others
+-- when the input clause matrix is empty, the specialized matrix is empty.
 specialC _c _i MkEmptyC = MkEmptyC
-specialC _c _i _ = undefined
-
+specialC notC _i _ =
+  error $ show notC
+    <> "\n is not a constructor pattern. Cannot specialize." 
 
 -- the default matrix retains the rows of P whose first pattern p_1^j admits all
 -- values c'(v1,...va) as instances, where constructor c' is not present in the
 -- first column of P.
-defaultMatrix :: ClauseMatrix -> Int -> ClauseMatrix
+defaultMatrix :: 
+  ClauseMatrix -- the input clause matrix
+  -> Int -- the row being checked
+  -> ClauseMatrix -- the default matrix
 defaultMatrix clauseM@(MkClauseMatrix p v) i
   | i == nrows p = MkEmptyC
   | otherwise =
       let recurse = defaultMatrix clauseM (i+1)
-      in
-      case V.head (getRow i p) of
-          WildCardP -> 
+          returnVarP =
             vJoin 
               (MkClauseMatrix (rowVector (V.tail (getRow i p))) (V.slice i 1 v))
               recurse
+      in
+      case V.head (getRow i p) of
+          WildCardP -> 
+            returnVarP
+          VarP _ -> returnVarP
           ConP _ _ -> vJoin MkEmptyC recurse
-          _ -> undefined
+          others -> errorMsg others
+-- when the input matrix is empty, the default matrix is empty.
 defaultMatrix MkEmptyC _i = MkEmptyC
 
 -- occurrences, sequences of integers that describe the positions of subterms.
@@ -115,10 +133,4 @@ cc oV (MkClauseMatrix p a)
         = Leaf 1 -- then the first action is yielded.
   | otherwise = -- P has at least one row and at least one column and 
   -- in the first row, at least one pattern is not a wild card
-      compiles oV (MkClauseMatrix p a)
-
-compiles :: V.Vector Occurrence 
-  -> ClauseMatrix
-  -> DTree
-compiles _oV MkEmptyC = Fail
-compiles oV (MkClauseMatrix p a) = undefined
+      undefined
