@@ -2,7 +2,7 @@ module DecisionTrees where
 -- compiling function definitions with pattern matching to case trees
 -- inspired by 
 -- `Compiling Pattern Matching to Good Decision Trees` by Luc Maranget
-import Types (Pattern(..), Value )
+import Types (Pattern(..), Value(..) )
 import Data.Matrix --( Matrix(nrows, ncols), getRow, matrix, (<|>), submatrix )
 import qualified Data.Vector as V --(Vector, notElem, map, head)
 
@@ -10,6 +10,7 @@ import qualified Data.Vector as V --(Vector, notElem, map, head)
 data ClauseMatrix
   = MkEmptyC
   | MkClauseMatrix (Matrix Pattern) (V.Vector Value)
+  deriving (Show)
 
 -- vertically joins 2 clause matrices
 vJoin :: ClauseMatrix -> ClauseMatrix -> ClauseMatrix
@@ -41,7 +42,7 @@ specialC ::
 -- when the input clause matrix is empty, the specialized matrix is empty.
 specialC _c _i MkEmptyC = MkEmptyC
 specialC c@(ConP name listP) i clauseM@(MkClauseMatrix p v) 
-  | i == nrows p = MkEmptyC
+  | i == nrows p + 1= MkEmptyC
   | otherwise =
       let makeCols = V.replicate (length listP)
           currentRow = getRow i p
@@ -49,7 +50,7 @@ specialC c@(ConP name listP) i clauseM@(MkClauseMatrix p v)
           recurse = specialC c (i+1) clauseM
           returnClause v1 =
             vJoin 
-              (MkClauseMatrix (rowVector (v1 V.++ drop1Col)) (V.slice i 1 v))
+              (MkClauseMatrix (rowVector (v1 V.++ drop1Col)) (V.slice (i-1) 1 v))
               recurse
       in
       case V.head currentRow of
@@ -153,4 +154,18 @@ cc oV clauseM@(MkClauseMatrix p _a)
           )
   -- TODO add the case when i /= 1, which returns Swap
 
+-- Functions for testing examples in GHCi
+emptyList :: Pattern
+emptyList = (ConP "emptyList" [])
 
+consOp :: Pattern
+consOp = ConP "cons" [WildCardP , WildCardP ]
+
+p :: Matrix Pattern
+p = fromLists [[emptyList,WildCardP ], [WildCardP ,emptyList],[consOp, consOp]]
+
+a :: V.Vector Value
+a = V.fromList [VGen 1, VGen 2, VGen 3]
+
+pMtoA :: ClauseMatrix
+pMtoA = MkClauseMatrix p a
