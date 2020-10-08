@@ -106,7 +106,7 @@ defaultMatrix MkEmptyC _i = MkEmptyC
 -- occurrences, sequences of integers that describe the positions of subterms.
 data Occurrence
   = Empty -- empty occurrence
-  | Occur Int Int -- k followed by an occurrence o
+  | Occur Int Int -- an occurrence o followed by an Int k.
 
 -- target language
 -- decision trees:
@@ -142,17 +142,24 @@ cc oV clauseM@(MkClauseMatrix p _a)
       let firstCol = getCol 1 p 
       in
         Switch 
-          (V.head oV) -- TODO is this the right occurrence?
+          (V.head oV)
           (V.toList $
             V.map 
               (\e -> 
                 -- map each constructor to a pair of head constr (HC) and
                 -- a decision tree of the specialized clause matrix of the HC 
-                (e, cc oV (specialC e 1 clauseM)) -- TODO get the oV correct
-              ) 
+                (e, 
+                 cc 
+                  (V.generate (arityC e) (Occur 1) V.++ V.tail oV)
+                  (specialC e 1 clauseM))
+              )
               firstCol
           )
   -- TODO add the case when i /= 1, which returns Swap
+
+arityC :: Pattern -> Int
+arityC (ConP _ listP) = length listP
+arityC _ = 0
 
 -- Functions for testing examples in GHCi
 emptyList :: Pattern
