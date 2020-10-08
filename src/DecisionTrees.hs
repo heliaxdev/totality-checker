@@ -86,12 +86,12 @@ defaultMatrix ::
   -> Int -- the row being checked
   -> ClauseMatrix -- the default matrix
 defaultMatrix clauseM@(MkClauseMatrix p v) i
-  | i == nrows p = MkEmptyC
+  | i == nrows p + 1 = MkEmptyC
   | otherwise =
       let recurse = defaultMatrix clauseM (i+1)
           returnVarP =
             vJoin 
-              (MkClauseMatrix (rowVector (V.tail (getRow i p))) (V.slice i 1 v))
+              (MkClauseMatrix (rowVector (V.tail (getRow i p))) (V.slice (i-1) 1 v))
               recurse
       in
       case V.head (getRow i p) of
@@ -161,11 +161,14 @@ emptyList = (ConP "emptyList" [])
 consOp :: Pattern
 consOp = ConP "cons" [WildCardP , WildCardP ]
 
-p :: Matrix Pattern
-p = fromLists [[emptyList,WildCardP ], [WildCardP ,emptyList],[consOp, consOp]]
+test_p :: Matrix Pattern
+test_p = fromLists [[emptyList, WildCardP], [WildCardP, emptyList], [consOp, consOp]]
 
-a :: V.Vector Value
-a = V.fromList [VGen 1, VGen 2, VGen 3]
+test_p2 :: Matrix Pattern
+test_p2 = fromLists [[emptyList, WildCardP], [WildCardP, emptyList], [WildCardP, WildCardP]]
+
+test_a :: V.Vector Value
+test_a = V.fromList [VGen 1, VGen 2, VGen 3]
 
 pMtoA :: ClauseMatrix
-pMtoA = MkClauseMatrix p a
+pMtoA = MkClauseMatrix test_p2 test_a
