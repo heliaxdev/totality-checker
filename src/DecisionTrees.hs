@@ -142,30 +142,32 @@ cc oV clauseM@(MkClauseMatrix p _a)
         = Leaf 1 -- then the first action is yielded.
   | otherwise = -- P has at least one row and at least one column and 
   -- in the first row, at least one pattern is not a wild card
-  -- when i = 1
       let firstCol = getCol 1 p 
           headOccur = V.head oV
           tailOccur = V.tail oV
       in
-        Switch 
-          headOccur
-          (
-            V.toList (
-            V.map 
-              (\e -> 
-                -- map each constructor to a pair of head constr (HC) and
-                -- a decision tree of the specialized clause matrix of the HC 
-                (e, 
-                 cc -- A_k = cc ((o_1 ·1 · · · o_1 ·a o_2 · · · o_n ), S(c_k , P → A))
-                  (V.generate (arityC e) (Occur (extractPat headOccur)) V.++ tailOccur)
-                  (specialC e 1 clauseM))
-              )
-              firstCol
-            ) <> -- and the pair * and cc ( (o_2 ... o_n), D(P → A))
-            [(ConP "default" [], (cc tailOccur (defaultMatrix clauseM 1)))]
-          )
-  -- TODO add the case when i /= 1, which returns Swap
-
+        -- when i = 1 (col 1 has at least 1 pattern that is not a wild card)
+        if any (/= WildCardP) (V.toList firstCol) then
+          Switch 
+            headOccur
+            (
+              V.toList (
+              V.map 
+                (\e -> 
+                  -- map each constructor to a pair of head constr (HC) and
+                  -- a decision tree of the specialized clause matrix of the HC 
+                  (e, 
+                  cc -- A_k = cc ((o_1 ·1 · · · o_1 ·a o_2 · · · o_n ), S(c_k , P → A))
+                    (V.generate (arityC e) (Occur (extractPat headOccur)) V.++ tailOccur)
+                    (specialC e 1 clauseM))
+                )
+                firstCol
+              ) <> -- and the pair * and cc ( (o_2 ... o_n), D(P → A))
+              [(ConP "default" [], (cc tailOccur (defaultMatrix clauseM 1)))]
+            )
+        else -- TODO when i /= 1
+          undefined
+  
 arityC :: Pattern -> Int
 arityC (ConP _ listP) = length listP
 arityC _ = 0
