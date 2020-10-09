@@ -145,20 +145,24 @@ cc oV clauseM@(MkClauseMatrix p _a)
   -- when i = 1
       let firstCol = getCol 1 p 
           headOccur = V.head oV
+          tailOccur = V.tail oV
       in
         Switch 
           headOccur
-          (V.toList $
+          (
+            V.toList (
             V.map 
               (\e -> 
                 -- map each constructor to a pair of head constr (HC) and
                 -- a decision tree of the specialized clause matrix of the HC 
                 (e, 
-                 cc 
-                  (V.generate (arityC e) (Occur (extractPat headOccur)) V.++ V.tail oV)
+                 cc -- A_k = cc ((o_1 ·1 · · · o_1 ·a o_2 · · · o_n ), S(c_k , P → A))
+                  (V.generate (arityC e) (Occur (extractPat headOccur)) V.++ tailOccur)
                   (specialC e 1 clauseM))
               )
               firstCol
+            ) <> -- and the pair * and cc ( (o_2 ... o_n), D(P → A))
+            [(ConP "default" [], (cc tailOccur (defaultMatrix clauseM 1)))]
           )
   -- TODO add the case when i /= 1, which returns Swap
 
