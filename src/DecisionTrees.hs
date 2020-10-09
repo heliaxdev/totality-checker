@@ -105,8 +105,12 @@ defaultMatrix MkEmptyC _i = MkEmptyC
 
 -- occurrences, sequences of integers that describe the positions of subterms.
 data Occurrence
-  = Empty -- empty occurrence
-  | Occur Int Int -- an occurrence o followed by an Int k.
+  = EmptyOccur Pattern -- empty occurrence
+  | Occur Pattern Int -- an occurrence o followed by an Int k.
+
+extractPat :: Occurrence -> Pattern
+extractPat (EmptyOccur pat) = pat
+extractPat (Occur pat _n) = pat
 
 -- target language
 -- decision trees:
@@ -140,9 +144,10 @@ cc oV clauseM@(MkClauseMatrix p _a)
   -- in the first row, at least one pattern is not a wild card
   -- when i = 1
       let firstCol = getCol 1 p 
+          headOccur = V.head oV
       in
         Switch 
-          (V.head oV)
+          headOccur
           (V.toList $
             V.map 
               (\e -> 
@@ -150,7 +155,7 @@ cc oV clauseM@(MkClauseMatrix p _a)
                 -- a decision tree of the specialized clause matrix of the HC 
                 (e, 
                  cc 
-                  (V.generate (arityC e) (Occur 1) V.++ V.tail oV)
+                  (V.generate (arityC e) (Occur (extractPat headOccur)) V.++ V.tail oV)
                   (specialC e 1 clauseM))
               )
               firstCol
