@@ -108,6 +108,7 @@ defaultMatrix MkEmptyC _i = MkEmptyC
 data Occurrence
   = EmptyOccur Pattern -- empty occurrence
   | Occur Pattern Int -- an occurrence o followed by an Int k.
+  deriving (Show)
 
 extractPat :: Occurrence -> Pattern
 extractPat (EmptyOccur pat) = pat
@@ -134,7 +135,7 @@ cc ::
   -> ClauseMatrix
   -> DTree
 cc _oV MkEmptyC = Fail -- if there's no pattern to match it fails.
-cc oV clauseM@(MkClauseMatrix p _a)
+cc oV clauseM@(MkClauseMatrix p a)
   | ncols p == 0 || -- if the number of column is 0 or
   -- if the first row of P has all wildcards 
     V.notElem 
@@ -173,8 +174,10 @@ cc oV clauseM@(MkClauseMatrix p _a)
           -- when i /= 1, swap cols 1 and i in both the occurrence and P, 
           -- obtaining o' and p'. cc (o, (P->A)) = Swap i cc (o',(P'->A))
           let i = findI p
+              -- the indexing for swap is such that you have to apply (-1) to
+              -- the n-th element (n starting from 1 as in getRow/getCol)
               o' = V.modify (\v -> swap v 0 (i-1)) oV
-              p' = clauseM -- TODO make p' for real
+              p' = MkClauseMatrix (switchCols 1 i p) a
           in
             Swap i (ccSwitch o' p')
 
@@ -213,3 +216,6 @@ test_a = V.fromList [VGen 1, VGen 2, VGen 3]
 
 pMtoA :: ClauseMatrix
 pMtoA = MkClauseMatrix test_p2 test_a
+
+test_oV :: V.Vector Occurrence
+test_oV = V.fromList [EmptyOccur emptyList, EmptyOccur consOp]
