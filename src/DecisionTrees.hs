@@ -5,6 +5,7 @@ module DecisionTrees where
 import Types (Pattern(..), Value(..) )
 import Data.Matrix --( Matrix(nrows, ncols), getRow, matrix, (<|>), submatrix )
 import qualified Data.Vector as V --(Vector, notElem, map, head)
+import Data.Vector.Mutable (swap)
 
 -- matrices of clauses: P -> A, where P is the pattern matrices. A is the rhs.
 data ClauseMatrix
@@ -142,39 +143,61 @@ cc oV clauseM@(MkClauseMatrix p _a)
         = Leaf 1 -- then the first action is yielded.
   | otherwise = -- P has at least one row and at least one column and 
   -- in the first row, at least one pattern is not a wild card
-      let firstCol = getCol 1 p 
-          headOccur = V.head oV
-          tailOccur = V.tail oV
+      let firstCol = getCol 1 p
+          ccSwitch occur clauseMSwitch =
+            let headOccur = V.head occur
+                tailOccur = V.tail occur
+            in
+              Switch 
+              headOccur
+              (
+                V.toList (
+                V.map 
+                  (\e -> 
+                    -- map each constructor to a pair of head constr (HC) and
+                    -- a decision tree of the specialized clause matrix of the HC 
+                    (e, 
+                    cc -- A_k = cc ((o_1 ·1 · · · o_1 ·a o_2 · · · o_n ), S(c_k , P → A))
+                      (V.generate (arityC e) (Occur (extractPat headOccur)) V.++ tailOccur)
+                      (specialC e 1 clauseMSwitch))
+                  )
+                  firstCol
+                ) <> -- and the pair * and cc ( (o_2 ... o_n), D(P → A))
+                [(ConP "default" [], cc tailOccur (defaultMatrix clauseMSwitch 1))]
+              )
       in
         -- when i = 1 (col 1 has at least 1 pattern that is not a wild card)
-        if any (/= WildCardP) (V.toList firstCol) then
-          Switch 
-            headOccur
-            (
-              V.toList (
-              V.map 
-                (\e -> 
-                  -- map each constructor to a pair of head constr (HC) and
-                  -- a decision tree of the specialized clause matrix of the HC 
-                  (e, 
-                  cc -- A_k = cc ((o_1 ·1 · · · o_1 ·a o_2 · · · o_n ), S(c_k , P → A))
-                    (V.generate (arityC e) (Occur (extractPat headOccur)) V.++ tailOccur)
-                    (specialC e 1 clauseM))
-                )
-                firstCol
-              ) <> -- and the pair * and cc ( (o_2 ... o_n), D(P → A))
-              [(ConP "default" [], (cc tailOccur (defaultMatrix clauseM 1)))]
-            )
-        else -- TODO when i /= 1
-          undefined
-  
+        if findI p == 1 then
+          ccSwitch oV clauseM
+        else 
+          -- when i /= 1, swap cols 1 and i in both the occurrence and P, 
+          -- obtaining o' and p'. cc (o, (P->A)) = Swap i cc (o',(P'->A))
+          let i = findI p
+              o' = V.modify (\v -> swap v 0 (i-1)) oV
+              p' = clauseM -- TODO make p' for real
+          in
+            Swap i (ccSwitch o' p')
+
+-- make sure to only use this 
+-- when i cannot possibly be greater than the number of col of P
+findIAux :: Int -> Matrix Pattern -> Int
+findIAux i p =
+  let whichCol col =
+        any (/= WildCardP) (getCol col p)
+  in
+    if whichCol i then i
+    else findIAux (i+1) p
+
+findI :: Matrix Pattern -> Int
+findI = findIAux 1
+        
 arityC :: Pattern -> Int
 arityC (ConP _ listP) = length listP
 arityC _ = 0
 
 -- Functions for testing examples in GHCi
 emptyList :: Pattern
-emptyList = (ConP "emptyList" [])
+emptyList = ConP "emptyList" []
 
 consOp :: Pattern
 consOp = ConP "cons" [WildCardP , WildCardP ]
