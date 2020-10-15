@@ -7,6 +7,9 @@ import Data.Matrix --( Matrix(nrows, ncols), getRow, matrix, (<|>), submatrix )
 import qualified Data.Vector as V --(Vector, notElem, map, head)
 import Data.Vector.Mutable (swap)
 
+-- in Data.Matrix the rows and cols start from 1
+-- in Data.Vector the indexes start from 0
+
 -- matrices of clauses: P -> A, where P is the pattern matrices. A is the rhs.
 data ClauseMatrix
   = MkEmptyC
@@ -148,6 +151,17 @@ cc oV clauseM@(MkClauseMatrix p a)
           ccSwitch occur clauseMSwitch =
             let headOccur = V.head occur
                 tailOccur = V.tail occur
+                maybeDefault 
+                -- the default matrix is only added when there exists a c 
+                -- that is not in the first col. 
+                  | V.notElem (extractPat headOccur) firstCol = 
+                      [
+                        (
+                          ConP "default" [], 
+                          cc tailOccur (defaultMatrix clauseMSwitch 1)
+                        )
+                      ]
+                  | otherwise = []
             in
               Switch 
               headOccur
@@ -163,8 +177,7 @@ cc oV clauseM@(MkClauseMatrix p a)
                       (specialC e 1 clauseMSwitch))
                   )
                   firstCol
-                ) <> -- and the pair * and cc ( (o_2 ... o_n), D(P → A))
-                [(ConP "default" [], cc tailOccur (defaultMatrix clauseMSwitch 1))]
+                ) <> maybeDefault
               )
       in
         -- when i = 1 (col 1 has at least 1 pattern that is not a wild card)
@@ -174,8 +187,6 @@ cc oV clauseM@(MkClauseMatrix p a)
           -- when i /= 1, swap cols 1 and i in both the occurrence and P, 
           -- obtaining o' and p'. cc (o, (P->A)) = Swap i cc (o',(P'->A))
           let i = findI p
-              -- the indexing for swap is such that you have to apply (-1) to
-              -- the n-th element (n starting from 1 as in getRow/getCol)
               o' = V.modify (\v -> swap v 0 (i-1)) oV
               p' = MkClauseMatrix (switchCols 1 i p) a
           in
