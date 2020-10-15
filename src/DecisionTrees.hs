@@ -148,37 +148,39 @@ cc oV clauseM@(MkClauseMatrix p a)
   | otherwise = -- P has at least one row and at least one column and 
   -- in the first row, at least one pattern is not a wild card
       let firstCol = getCol 1 p
-          ccSwitch occur clauseMSwitch =
-            let headOccur = V.head occur
-                tailOccur = V.tail occur
-                maybeDefault 
-                -- the default matrix is only added when there exists a c 
-                -- that is not in the first col. 
-                  | V.notElem (extractPat headOccur) firstCol = 
-                      [
-                        (
-                          ConP "default" [], 
-                          cc tailOccur (defaultMatrix clauseMSwitch 1)
-                        )
-                      ]
-                  | otherwise = []
+          ccSwitch occurSwitch clauseMSwitch =
+            let headOccur = V.head occurSwitch
+                tailOccur = V.tail occurSwitch
+                cAPairList = 
+                  V.toList (
+                    V.map 
+                      (\e -> 
+                        -- map each constructor to a pair of head constr (HC) and
+                        -- a decision tree of the specialized clause matrix of the HC 
+                        (e, 
+                        cc -- A_k = cc ((o_1 ·1 · · · o_1 ·a o_2 · · · o_n ), S(c_k , P → A))
+                          (V.generate (arityC e) (Occur (extractPat headOccur)) V.++ tailOccur)
+                          (specialC e 1 clauseMSwitch)))
+                      firstCol)
             in
-              Switch 
-              headOccur
-              (
-                V.toList (
-                V.map 
-                  (\e -> 
-                    -- map each constructor to a pair of head constr (HC) and
-                    -- a decision tree of the specialized clause matrix of the HC 
-                    (e, 
-                    cc -- A_k = cc ((o_1 ·1 · · · o_1 ·a o_2 · · · o_n ), S(c_k , P → A))
-                      (V.generate (arityC e) (Occur (extractPat headOccur)) V.++ tailOccur)
-                      (specialC e 1 clauseMSwitch))
+              -- the default matrix is only added when there exists a c 
+              -- that is not in the first col. 
+              if V.notElem (extractPat headOccur) firstCol then -- TODO confirm
+                Switch 
+                  headOccur
+                  (
+                    cAPairList <>
+                    [ -- append *:A to the end of the list
+                      (
+                        ConP "default" [], -- constructor signalling default
+                        cc tailOccur (defaultMatrix clauseMSwitch 1)
+                      )
+                    ]
                   )
-                  firstCol
-                ) <> maybeDefault
-              )
+              else
+                Switch
+                  headOccur
+                  cAPairList
       in
         -- when i = 1 (col 1 has at least 1 pattern that is not a wild card)
         if findI p == 1 then
