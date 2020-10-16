@@ -2,28 +2,26 @@ module DecisionTrees where
 -- compiling function definitions with pattern matching to case trees
 -- inspired by 
 -- `Compiling Pattern Matching to Good Decision Trees` by Luc Maranget
+-- implemented using list of lists instead of matrix so that clauses can 
+-- have different number of args
 import Types (Pattern(..), Value(..) )
-import Data.Matrix --( Matrix(nrows, ncols), getRow, matrix, (<|>), submatrix )
-import qualified Data.Vector as V --(Vector, notElem, map, head)
-import Data.Vector.Mutable (swap)
-
--- in Data.Matrix the rows and cols start from 1
--- in Data.Vector the indexes start from 0
-
--- matrices of clauses: P -> A, where P is the pattern matrices. A is the rhs.
-data ClauseMatrix
+import Data.List ( unfoldr )
+-- A function definition can be represented as P -> A, 
+-- where P is the list of clauses, and each clause contains a list of patterns.
+-- A is the list of rhs of the clauses.
+data ClauseList
   = MkEmptyC
-  | MkClauseMatrix (Matrix Pattern) (V.Vector Value)
+  | MkClauseList [[Pattern]] [Value]
   deriving (Show)
 
 -- vertically joins 2 clause matrices
-vJoin :: ClauseMatrix -> ClauseMatrix -> ClauseMatrix
-vJoin (MkClauseMatrix p1 v1) (MkClauseMatrix p2 v2) =
-  MkClauseMatrix ((<->) p1 p2) (v1 V.++ v2)
+vJoin :: ClauseList -> ClauseList -> ClauseList
+vJoin (MkClauseList p1 v1) (MkClauseList p2 v2) =
+  MkClauseList (p1 <> p2) (v1 <> v2)
 vJoin MkEmptyC c = c
 vJoin c MkEmptyC = c
 
--- matrix decomposition operations: 
+-- decomposition operations: 
 -- (1) specialization by a constructor c, S(c,P->A) 
 -- (2) computation of the default matrix, D(P->A)
 
@@ -39,73 +37,86 @@ errorMsg pat =
 -- v1 admits c as a head constructor. (See p.3 of paper)
 specialC :: 
   Pattern -- specialization by this constructor (c), aka the head constructor
-  -> Int -- the row to be checked
-  -> ClauseMatrix -- the clause matrix to be transformed
+  -> ClauseList -- the clause matrix to be transformed
   -- output is a matrix with some rows erased and some cols added
-  -> ClauseMatrix
+  -> ClauseList
 -- when the input clause matrix is empty, the specialized matrix is empty.
-specialC _c _i MkEmptyC = MkEmptyC
-specialC c@(ConP name listP) i clauseM@(MkClauseMatrix p v) 
-  | i == nrows p + 1= MkEmptyC
-  | otherwise =
-      let makeCols = V.replicate (length listP)
-          currentRow = getRow i p
-          drop1Col = V.tail currentRow
-          recurse = specialC c (i+1) clauseM
-          returnClause v1 =
-            vJoin 
-              (MkClauseMatrix (rowVector (v1 V.++ drop1Col)) (V.slice (i-1) 1 v))
+specialC _c MkEmptyC = MkEmptyC
+specialC c@(ConP name listP) (MkClauseList (hdp:tlp) (hda:tla)) =
+  let makeCols = replicate (length listP)
+      drop1Col = tail hdp
+      recurse = specialC c (MkClauseList tlp tla)
+      returnClause pats =
+        vJoin 
+          (MkClauseList [pats <> drop1Col] [hda])
+          recurse
+  in
+    case head hdp of
+      WildCardP -> 
+        -- when p_1^j is a wild card, add wild card cols to the row
+        -- the no. of cols to add equals the no. of constructor args
+        returnClause (makeCols WildCardP)
+      VarP nameV -> returnClause (makeCols $ VarP nameV)
+      (ConP nameC listPat) 
+        -- when the constructor names are not the same, no row
+        | nameC /= name -> 
+            vJoin
+              MkEmptyC
               recurse
-      in
-      case V.head currentRow of
-        WildCardP -> 
-          -- when p_1^j is a wild card, add wild card cols to the row
-          -- the no. of cols to add equals the no. of constructor args
-          returnClause (makeCols WildCardP)
-        VarP nameV -> returnClause (makeCols $ VarP nameV)
-        (ConP nameC listPat) 
-          -- when the constructor names are not the same, no row
-          | nameC /= name -> 
-              vJoin
-                MkEmptyC
-                recurse
-          | otherwise -> -- when the constructor names are the same
-              -- add the constructor argument cols in front
-              returnClause (V.fromList listPat)
-        others ->
-          errorMsg others
+        | otherwise -> -- when the constructor names are the same
+            -- add the constructor argument cols in front
+            returnClause listPat
+      others ->
+        errorMsg others
 -- when the head constructor is a variable/wild card, the specialized matrix is empty.
-specialC WildCardP _i _clauseMatrix = MkEmptyC
-specialC (VarP _name) _i _clauseMatrix = MkEmptyC
-specialC notVC _i _ =
+specialC WildCardP _clauseL = MkEmptyC
+specialC (VarP _name) _clauseL = MkEmptyC
+specialC notVC _ =
   error $ "DecisionTrees, specialC: \n" 
     <> show notVC
     <> "\n is not a variable/constructor pattern. Cannot specialize." 
+  
+lhsEmpty :: Show a => [a] -> String -- for error msg
+lhsEmpty rhs = 
+  "the number of clauses on the left and right hand side are not equal."
+  <> " The left hand side of the function clauses is empty,"
+  <> " while the right hand side is "
+  <> show rhs
+
+rhsEmpty :: Show a => [a] -> String -- for error msg
+rhsEmpty lhs = 
+  "the number of clauses on the left and right hand side are not equal."
+  <> " The right hand side of the function clauses is empty,"
+  <> " while the left hand side is "
+  <> show lhs
 
 -- the default matrix retains the rows of P whose first pattern p_1^j admits all
 -- values c'(v1,...va) as instances, where constructor c' is not present in the
 -- first column of P.
 defaultMatrix :: 
-  ClauseMatrix -- the input clause matrix
-  -> Int -- the row being checked
-  -> ClauseMatrix -- the default matrix
-defaultMatrix clauseM@(MkClauseMatrix p v) i
-  | i == nrows p + 1 = MkEmptyC
-  | otherwise =
-      let recurse = defaultMatrix clauseM (i+1)
-          returnVarP =
-            vJoin 
-              (MkClauseMatrix (rowVector (V.tail (getRow i p))) (V.slice (i-1) 1 v))
-              recurse
-      in
-      case V.head (getRow i p) of
-          WildCardP -> 
-            returnVarP
-          VarP _ -> returnVarP
-          ConP _ _ -> vJoin MkEmptyC recurse
-          others -> errorMsg others
+  ClauseList -- the input clause matrix
+  -> ClauseList -- the default matrix
 -- when the input matrix is empty, the default matrix is empty.
-defaultMatrix MkEmptyC _i = MkEmptyC
+defaultMatrix MkEmptyC = MkEmptyC
+defaultMatrix (MkClauseList [] a) = error $
+  "DecisionTrees, defaultMatrix: "
+  <> lhsEmpty a
+defaultMatrix (MkClauseList p []) = error $
+  "DecisionTrees, defaultMatrix: "
+  <> rhsEmpty p
+defaultMatrix (MkClauseList (hdp:tlp) (hda:tla)) =
+  let recurse = defaultMatrix (MkClauseList tlp tla)
+      returnVarP =
+        vJoin 
+          (MkClauseList [tail hdp] [hda])
+          recurse
+  in
+  case head hdp of
+      WildCardP -> 
+        returnVarP
+      VarP _ -> returnVarP
+      ConP _ _ -> vJoin MkEmptyC recurse
+      others -> errorMsg others
 
 -- occurrences, sequences of integers that describe the positions of subterms.
 data Occurrence
@@ -128,44 +139,56 @@ data DTree
   | Swap Int DTree -- control instructions for evaluating decision trees
 
 -- compilation scheme, takes 
--- (1) a vector of occurrences, oV
--- (2) a clause matrix, (P->A)
+-- (1) a list of occurrences, oL
+-- (2) a clause list, (P->A)
 -- returns a DTree
 cc :: 
   -- defines the fringe (the subterms of the subject value that  
   -- need to be checked against the patterns of P to decide matching)
-  V.Vector Occurrence 
-  -> ClauseMatrix
+  [Occurrence] 
+  -> ClauseList
   -> DTree
-cc _oV MkEmptyC = Fail -- if there's no pattern to match it fails.
-cc oV clauseM@(MkClauseMatrix p a)
-  | ncols p == 0 || -- if the number of column is 0 or
+cc _oL MkEmptyC = Fail -- if there's no pattern to match it fails.
+cc _oL (MkClauseList [] a) = error $
+  "DecisionTrees, cc: "
+  <> lhsEmpty a
+cc _oL (MkClauseList p []) = error $
+  "DecisionTrees, cc: "
+  <> rhsEmpty p
+cc oL clauseL@(MkClauseList p@(hdp:_) _)
+  | all (== 0) (map length p) || -- if the number of column is 0 or
   -- if the first row of P has all wildcards 
-    V.notElem 
-      False 
-      (V.map (== WildCardP) (getRow 1 p)) 
+    all (== WildCardP) hdp 
         = Leaf 1 -- then the first action is yielded.
   | otherwise = -- P has at least one row and at least one column and 
   -- in the first row, at least one pattern is not a wild card
-      let firstCol = getCol 1 p
+      let firstCol = map head p
           ccSwitch occurSwitch clauseMSwitch =
-            let headOccur = V.head occurSwitch
-                tailOccur = V.tail occurSwitch
+            let headOccur = head occurSwitch
+                tailOccur = tail occurSwitch
                 cAPairList = 
-                  V.toList (
-                    V.map 
+                    map 
                       (\e -> 
                         -- map each constructor to a pair of head constr (HC) and
                         -- a decision tree of the specialized clause matrix of the HC 
                         (e, 
                         cc -- A_k = cc ((o_1 ·1 · · · o_1 ·a o_2 · · · o_n ), S(c_k , P → A))
-                          (V.generate (arityC e) (Occur (extractPat headOccur)) V.++ tailOccur)
-                          (specialC e 1 clauseMSwitch)))
-                      firstCol)
+                          (
+                            unfoldr 
+                              (\b -> 
+                                if b == arityC e then 
+                                  Nothing 
+                                else Just (Occur (extractPat headOccur) b, b+1)
+                              ) 
+                              1
+                            <> tailOccur
+                          )
+                          (specialC e clauseMSwitch)))
+                      firstCol
             in
               -- the default matrix is only added when there exists a c 
               -- that is not in the first col. 
-              if V.notElem (extractPat headOccur) firstCol then -- TODO confirm
+              if extractPat headOccur `notElem` firstCol then -- TODO confirm
                 Switch 
                   headOccur
                   (
@@ -173,7 +196,7 @@ cc oV clauseM@(MkClauseMatrix p a)
                     [ -- append *:A to the end of the list
                       (
                         ConP "default" [], -- constructor signalling default
-                        cc tailOccur (defaultMatrix clauseMSwitch 1)
+                        cc tailOccur (defaultMatrix clauseMSwitch)
                       )
                     ]
                   )
@@ -183,30 +206,13 @@ cc oV clauseM@(MkClauseMatrix p a)
                   cAPairList
       in
         -- when i = 1 (col 1 has at least 1 pattern that is not a wild card)
-        if findI p == 1 then
-          ccSwitch oV clauseM
+        if any (/= WildCardP) (map head p) then
+          ccSwitch oL clauseL
         else 
           -- when i /= 1, swap cols 1 and i in both the occurrence and P, 
           -- obtaining o' and p'. cc (o, (P->A)) = Swap i cc (o',(P'->A))
-          let i = findI p
-              o' = V.modify (\v -> swap v 0 (i-1)) oV
-              p' = MkClauseMatrix (switchCols 1 i p) a
-          in
-            Swap i (ccSwitch o' p')
+          undefined -- TODO this may be problematic with dependent pat matching?
 
--- make sure to only use this 
--- when i cannot possibly be greater than the number of col of P
-findIAux :: Int -> Matrix Pattern -> Int
-findIAux i p =
-  let whichCol col =
-        any (/= WildCardP) (getCol col p)
-  in
-    if whichCol i then i
-    else findIAux (i+1) p
-
-findI :: Matrix Pattern -> Int
-findI = findIAux 1
-        
 arityC :: Pattern -> Int
 arityC (ConP _ listP) = length listP
 arityC _ = 0
@@ -218,17 +224,17 @@ emptyList = ConP "emptyList" []
 consOp :: Pattern
 consOp = ConP "cons" [WildCardP , WildCardP ]
 
-test_p :: Matrix Pattern
-test_p = fromLists [[emptyList, WildCardP], [WildCardP, emptyList], [consOp, consOp]]
+test_p :: [[Pattern]]
+test_p = [[emptyList, WildCardP], [WildCardP, emptyList], [consOp, consOp]]
 
-test_p2 :: Matrix Pattern
-test_p2 = fromLists [[emptyList, WildCardP], [WildCardP, emptyList], [WildCardP, WildCardP]]
+test_p2 :: [[Pattern]]
+test_p2 = [[emptyList, WildCardP], [WildCardP, emptyList], [WildCardP, WildCardP]]
 
-test_a :: V.Vector Value
-test_a = V.fromList [VGen 1, VGen 2, VGen 3]
+test_a :: [Value]
+test_a = [VGen 1, VGen 2, VGen 3]
 
-pMtoA :: ClauseMatrix
-pMtoA = MkClauseMatrix test_p2 test_a
+pMtoA :: ClauseList
+pMtoA = MkClauseList test_p2 test_a
 
-test_oV :: V.Vector Occurrence
-test_oV = V.fromList [EmptyOccur emptyList, EmptyOccur consOp]
+test_oV :: [Occurrence]
+test_oV = [EmptyOccur emptyList, EmptyOccur consOp]
