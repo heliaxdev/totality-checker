@@ -24,7 +24,7 @@ data Value
   | VLam Name Env Expr -- Lam x e^ρ
   | VPi Name Value Env Expr -- Pi x v_A e^ρ where v_A = eval A^ρ
   -- atomic values:
-  | VGen Int -- generic value k
+  | VGen Int -- generic value k, starts from 0
   | VStar -- universe of small types
   | VCon Name -- constructor
   | VDef Name -- function/data

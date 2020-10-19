@@ -120,13 +120,9 @@ defaultMatrix (MkClauseList (hdp:tlp) (hda:tla)) =
 
 -- occurrences, sequences of integers that describe the positions of subterms.
 data Occurrence
-  = EmptyOccur Pattern -- empty occurrence
-  | Occur Pattern Int -- an occurrence o followed by an Int k.
+  = EmptyOccur -- empty occurrence
+  | Occur Int Occurrence -- an Int k followed by an occurrence o.
   deriving (Show)
-
-extractPat :: Occurrence -> Pattern
-extractPat (EmptyOccur pat) = pat
-extractPat (Occur pat _n) = pat
 
 -- target language
 -- decision trees:
@@ -166,19 +162,22 @@ cc oL clauseL@(MkClauseList p@(hdp:_) _)
           ccSwitch occurSwitch clauseMSwitch =
             let headOccur = head occurSwitch
                 tailOccur = tail occurSwitch
-                cAPairList = 
+                cAPairList = -- [c_1;A_1...c_z;A_z]
                     map 
                       (\e -> 
-                        -- map each constructor to a pair of head constr (HC) and
-                        -- a decision tree of the specialized clause matrix of the HC 
+                        -- map each constructor to a pair of head constr (HC)
+                        -- and a decision tree of the specialized clause matrix
+                        -- of the HC
                         (e, 
-                        cc -- A_k = cc ((o_1 ·1 · · · o_1 ·a o_2 · · · o_n ), S(c_k , P → A))
+                        cc 
+                        -- A_k = 
+                        -- cc ((1·o_1 · · · a·o_1   o_2 · · · o_n ), S(c_k , P → A))
                           (
                             unfoldr 
                               (\b -> 
-                                if b == arityC e then 
+                                if b+1 == arityC e then 
                                   Nothing 
-                                else Just (Occur (extractPat headOccur) b, b+1)
+                                else Just (Occur b headOccur, b+1)
                               ) 
                               1
                             <> tailOccur
@@ -186,9 +185,10 @@ cc oL clauseL@(MkClauseList p@(hdp:_) _)
                           (specialC e clauseMSwitch)))
                       firstCol
             in
-              -- the default matrix is only added when there exists a c 
-              -- that is not in the first col. 
-              if extractPat headOccur `notElem` firstCol then -- TODO confirm
+              -- the default matrix is only added when there exists a 
+              -- constructor that is not in the first col. So, if there is
+              -- pattern matching coverage check, it's never added. 
+              if False then -- TODO: if the first col does not form a sig
                 Switch 
                   headOccur
                   (
@@ -200,7 +200,7 @@ cc oL clauseL@(MkClauseList p@(hdp:_) _)
                       )
                     ]
                   )
-              else
+              else -- the 1st col is a sig (1st col has all the constructors)
                 Switch
                   headOccur
                   cAPairList
@@ -209,6 +209,8 @@ cc oL clauseL@(MkClauseList p@(hdp:_) _)
         if any (/= WildCardP) (map head p) then
           ccSwitch oL clauseL
         else 
+          -- if first col has all wildcards then there must be more than 1 col
+          -- otherwise it will return Leaf 1
           -- when i /= 1, swap cols 1 and i in both the occurrence and P, 
           -- obtaining o' and p'. cc (o, (P->A)) = Swap i cc (o',(P'->A))
           undefined -- TODO this may be problematic with dependent pat matching?
@@ -237,4 +239,4 @@ pMtoA :: ClauseList
 pMtoA = MkClauseList test_p2 test_a
 
 test_oV :: [Occurrence]
-test_oV = [EmptyOccur emptyList, EmptyOccur consOp]
+test_oV = [EmptyOccur, Occur 1 EmptyOccur]
