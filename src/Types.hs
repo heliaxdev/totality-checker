@@ -2,6 +2,7 @@ module Types where
 
 import Control.Monad.State ( StateT )
 import qualified Data.Map            as Map
+import Data.Maybe (fromMaybe)
 
 data Expr
   = Star -- universe of small types
@@ -131,9 +132,10 @@ emptySig = Map.empty
 
 lookupSig :: Name -> Signature -> SigDef
 lookupSig n sig =
-  case Map.lookup n sig of
-    Nothing -> error $ "Error not in signature: " <> show n <> " " <> show sig
-    Just k -> k
+  fromMaybe
+    (error $ 
+      "lookupSig: " <> show n <> " not in signature " <> show sig)
+    (Map.lookup n sig)
 
 addSig :: Signature -> Name -> SigDef -> Signature
 addSig sig n def = Map.insert n def sig

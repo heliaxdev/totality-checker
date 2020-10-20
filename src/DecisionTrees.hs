@@ -186,8 +186,7 @@ cc oL clauseL@(MkClauseList p@(hdp:_) _)
                       firstCol
             in
               -- the default matrix is only added when there exists a 
-              -- constructor that is not in the first col. So, if there is
-              -- pattern matching coverage check, it's never added. 
+              -- constructor that is not in the first col. 
               if False then -- TODO: if the first col does not form a sig
                 Switch 
                   headOccur
