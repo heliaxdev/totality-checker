@@ -70,6 +70,13 @@ checkPattern _k _flex _ins _rho _gamma v _ =
 -- we can instantiate v1 to v2, vice versa.
 inst :: Int -> [Int] -> Value -> Value -> TypeCheck Substitution
 inst m flex v1 v2 =
+  let occurError val valOccursIn = 
+        error $ 
+          "inst: occurs check failed"
+          <> show val 
+          <> " occurs in "
+          <> show valOccursIn
+  in
   case (v1, v2) of
     (VGen k, _)
     -- the problem equation is {k = v2}
@@ -78,13 +85,14 @@ inst m flex v1 v2 =
         noc <- nonOccur m v1 v2 -- check for non-occurrence
         if noc -- if k is not in v2
           then return [(k, v2)] -- {k ↦ v2}
-          else error "inst: occurs check failed"
+          else 
+            occurError (VGen k) v2
     (_, VGen k)
       | k `elem` flex -> do
         noc <- nonOccur m v2 v1
         if noc
           then return [(k, v1)]
-          else error "inst: occurs check failed"
+          else occurError v2 (VGen k)
     (VApp (VDef d1) vl1, VApp (VDef d2) vl2)
       | d1 == d2 -> instList m flex vl1 vl2
     (VApp (VCon c1) vl1, VApp (VCon c2) vl2)
