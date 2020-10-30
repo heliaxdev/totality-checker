@@ -124,6 +124,7 @@ data Pattern
   | VarP Name -- variable pattern
   | ConP Name [Pattern] -- constructor pattern
   | DotP Expr -- inaccessible pattern
+  | AbsurdP -- absurd pattern
   | SuccP Pattern -- size successor pattern
   deriving (Eq, Show)
 
