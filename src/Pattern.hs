@@ -179,7 +179,11 @@ p2v k p =
        in (VSucc v, k')
     -- dot patterns are converted to flex k's.
     DotP _e -> (VGen k, k + 1)
+    DotConP n pl -> -- TODO
+      let (vl, k') = ps2vs k pl
+       in (VApp (VCon n) vl, k')
     AbsurdP -> undefined --TODO
+    ReflP -> (VRefl, k+1)
 
 -- turn a list of patterns to a list of values.
 -- used in turning constructor patterns to values.

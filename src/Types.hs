@@ -12,6 +12,7 @@ data Expr
   | Lam Name Expr -- abstraction
   | Pi Name Expr Expr -- (PI) dependent function space
   | App Expr [Expr] -- application
+  | Refl -- proof of reflexivity
   -- size type for termination checking
   | Size -- size type
   | Succ Expr -- size successor
@@ -29,6 +30,7 @@ data Value
   | VStar -- universe of small types
   | VCon Name -- constructor
   | VDef Name -- function/data
+  | VRefl -- proof of reflexivity
   -- extensions for size type:
   | VSize -- size type
   | VInfty -- size limit
@@ -54,6 +56,7 @@ instance Show Value where
   show VSize = "Size"
   show VInfty = "∞"
   show (VSucc s) = "(Size S " <> " " <> show s <> ")"
+  show VRefl = "Refl"
 
 showVals :: [Value] -> String
 showVals []     = ""
@@ -123,9 +126,11 @@ data Pattern
   = WildCardP -- wild card pattern
   | VarP Name -- variable pattern
   | ConP Name [Pattern] -- constructor pattern
-  | DotP Expr -- inaccessible pattern
+  | DotP Expr -- forced/inaccessible pattern
+  | DotConP Name [Pattern] -- forced constructor pattern
   | AbsurdP -- absurd pattern
   | SuccP Pattern -- size successor pattern
+  | ReflP -- pattern for reflexivity proof
   deriving (Eq, Show)
 
 emptySig :: Signature

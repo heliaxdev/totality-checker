@@ -29,6 +29,7 @@ eval env (Succ s) = do
   vs <- eval env s
   return $ sinfty vs
 eval _env Infty = return VInfty
+eval _env Refl = return VRefl
 
 updateEnv :: Env -> Name -> Value -> Env
 updateEnv env n v = (n, v) : env
