@@ -15,4 +15,7 @@ by Karl Mehltretter (2007) and
 - *Towards a practical programming
 language based on dependent type theory* by Ulf Norell (2007).
 
+- *Elaborating dependent (co)pattern matching: No
+pattern left behind* by Jesper Cockx and Andreas Abel (2020)
+
 See the [reference](https://github.com/thealmarty/totality-checker/blob/master/Reference/reference.pdf) for a complete reference.
