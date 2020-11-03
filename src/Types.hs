@@ -120,10 +120,12 @@ type TBind = (Name, Expr)
 -- a clause has a list of patterns and the right hand side expression
 data Clause =
   Clause [Pattern] Expr
+  | AbsurdClause [Pattern] -- absurd clauses don't have rhs
   deriving (Eq, Show)
 
 data Pattern
   = WildCardP -- wild card pattern
+  -- | LiteralP Literal -- literal pattern TODO
   | VarP Name -- variable pattern
   | ConP Name [Pattern] -- constructor pattern
   | DotP Expr -- forced/inaccessible pattern
