@@ -5,6 +5,7 @@ import           Control.Monad       (zipWithM_)
 import           Control.Monad.State (get, put)
 import           Evaluator           (eval)
 import Pattern ( checkDot, checkPats )
+import Coverage
 import           Types
 
 -- check a list of functions
@@ -24,6 +25,7 @@ addFunSig (TypeSig n t, cl) = do
   put (addSig sig n (FunSig vt cl False))
 
 -- check all clauses of a function.
+-- TODO add coverage check
 typeCheckFunClause :: Int -> (TypeSig, [Clause]) -> TypeCheck ()
 typeCheckFunClause _k (TypeSig _n t, cl) = checkFun t cl
 
