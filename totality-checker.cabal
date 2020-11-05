@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f8f4a0dcff92c865d9ce63f79ef69e1724fb971365982bef7082ccb6588a6ed5
+-- hash: 460b7348e793167b16db7b8168798747e108192ab7b2876ed729cac643c02457
 
 name:           totality-checker
 version:        0.1.0.0
@@ -32,9 +32,10 @@ library
       CheckExpr
       CheckFunction
       Coverage
+      Coverage.Match
+      Coverage.SplitTree
       Evaluator
       Pattern
-      SplitTree
       SPos
       Termination
       TypeChecker

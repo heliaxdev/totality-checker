@@ -34,7 +34,7 @@ data WithArity c = WithArity { arity :: Int, content :: c }
 
 -- | Case in case tree
 data Case c = Branches
-  { conBranches    :: Map QName (WithArity c)
+  { conBranches    :: Map Name (WithArity c)
     -- ^ Map from constructor names to their arity
     --   and the case subtree.
   , etaBranch      :: Maybe (ConHead, WithArity c)

@@ -1,4 +1,3 @@
-To check for pattern matching coverage, we follow Cockx and Abel (2020) to compile pattern matching definitions to case trees.
+Function definitions with pattern matching may involve clauses that are unreachable or redundant. The patterns may also not be exhaustive. We want to warn users of all these cases. We implement a pattern matching coverage check that checks for all these cases.
 
-We add the following to expression:
-
+After the patterns are type checked, we transform the clauses into a split tree.

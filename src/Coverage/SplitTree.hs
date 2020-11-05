@@ -10,7 +10,7 @@ each leaf of the split tree.
 
 -}
 
-module SplitTree where
+module Coverage.SplitTree where
 
 import Types ( Name )
   
