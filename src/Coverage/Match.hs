@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-| Matcher for coverage checking. Given
 
     1. the function clauses @cs@
@@ -15,16 +16,18 @@ module Coverage.Match where
 import Types
 
 data Match a
-  = Yes a
-  | No
-  | Block
+  = Yes a -- (MATCH) -- the current neighbourhood matches a clause
+  | No -- (MISSED) -- the current neighbourhood fails to match all clauses
+  | Block -- (SPLIT) -- matching inconclusive
     { blockedOnResult :: BlockedOnResult
     , blockedOnVars :: BlockingVars
     }
+  deriving (Show)
 
 data BlockedOnResult
   = BlockedOnApply -- Blocked on un-introduced argument
   | NotBlockedOnResult
+  deriving (Show)
 
 -- | Variable blocking a match
 data BlockingVar = BlockingVar
@@ -38,6 +41,7 @@ type BlockingVars = [BlockingVar]
 
 -- | Match the given patterns against a list of clauses
 -- if successful, return the index of the covering clause
+-- called by @cover@ in [Coverage.hs]
 -- calls matchClause which calls matchPat
 -- match :: TypeCheck m 
 --   => [Clause] -- search for clause that covers the patterns
@@ -56,46 +60,35 @@ type BlockingVars = [BlockingVar]
 --   3. @Block [x]@ means @p@ is a proper instance of @q@ and could become
 --      a cover if @q@ was split on variable @x@.
 
--- matchPat
---   :: (PureTCM m, DeBruijn a)
---   => Pattern' a
---      -- ^ Clause pattern @p@ (to cover split clause pattern).
---   -> SplitPattern
---      -- ^ Split clause pattern @q@ (to be covered by clause pattern).
---   -> m MatchResult
---      -- ^ Result.
---      --   If 'Yes', also the instantiation @rs@ of the clause pattern variables
---      --   to produce the split clause pattern, @p[rs] = q@.
--- matchPat p q = case p of
-
---   VarP _ x   -> yes [(fromMaybe __IMPOSSIBLE__ (deBruijnView x),q)]
-
---   DotP{}   -> yes []
---   ConP c ci ps -> unDotP q >>= unLitP >>= \case
---     VarP _ x -> blockedOnConstructor (splitPatVarIndex x) c ci
---     ConP c' i qs
---       | c == c'   -> matchPats ps qs
---       | otherwise -> no
---     DotP o t  -> no
---     DefP{}   -> no
---     LitP{}    -> __IMPOSSIBLE__  -- excluded by typing and unLitP
---     ProjP{}   -> __IMPOSSIBLE__  -- excluded by typing
---     IApplyP _ _ _ x -> blockedOnConstructor (splitPatVarIndex x) c ci
-
---   DefP o c ps -> unDotP q >>= \case
---     VarP _ x -> __IMPOSSIBLE__ -- blockedOnConstructor (splitPatVarIndex x) c
---     ConP c' i qs -> no
---     DotP o t  -> no
---     LitP{}    -> no
---     DefP o c' qs
---       | c == c'   -> matchPats ps qs
---       | otherwise -> no
---     ProjP{}   -> __IMPOSSIBLE__  -- excluded by typing
---     IApplyP _ _ _ x -> __IMPOSSIBLE__ -- blockedOnConstructor (splitPatVarIndex x) c
-
--- -- | Unfold one level of a dot pattern to a proper pattern if possible.
--- unDotP :: (MonadReduce m, DeBruijn a) => Pattern' a -> m (Pattern' a)
--- unDotP (DotP o v) = reduce v >>= \case
+matchPat ::
+  Pattern
+  -- ^ Clause pattern @p@ (to cover split clause pattern).
+  -> Pattern
+     -- ^ Split clause pattern @q@ (to be covered by clause pattern).
+  -> Match [Pattern]
+     -- ^ Result.
+     --   If 'Yes', also the instantiation @rs@ of the clause pattern variables
+     --   to produce the split clause pattern, @p[rs] = q@.
+matchPat p q = case p of
+  WildCardP -> Yes [q]
+  VarP _   -> Yes [q]
+  DotP _ -> Yes []
+  AbsurdP -> No -- AbsurdP will never be matched
+  SuccP _ -> error $ "matchPat: the user cannot enter SuccP as a pattern" 
+  ConP name pats -> case q of 
+    -- unDotP q >>= \case TODO undot a level
+    WildCardP -> Block NotBlockedOnResult [(BlockingVar [] False)]
+    VarP _ -> Block NotBlockedOnResult [(BlockingVar [] False)]
+    ConP qname qs
+      | name == qname -> matchPats pats qs
+      | otherwise -> No
+    DotP _ -> No
+    AbsurdP -> No
+    SuccP _ -> error $ "matchPat: SuccP is not a suitable pattern."
+  
+-- | Unfold one level of a dot pattern to a proper pattern if possible.
+-- unDotP :: (MonadReduce m, DeBruijn a) => Pattern -> m Pattern
+-- unDotP (DotP v) = reduce v >>= \case
 --   Var i [] -> return $ deBruijnVar i
 --   Con c _ vs -> do
 --     let ps = map (fmap $ unnamed . DotP o) $ fromMaybe __IMPOSSIBLE__ $ allApplyElims vs
@@ -103,3 +96,48 @@ type BlockingVars = [BlockingVar]
 --   Lit l -> return $ LitP (PatternInfo PatODot []) l
 --   v     -> return $ dotP v
 -- unDotP p = return p
+
+-- | @matchPats ps qs@ checks whether a function clause with patterns
+--   @ps@ covers a split clause with patterns @qs@.
+matchPats ::
+  [Pattern]
+     -- ^ Clause pattern vector @ps@ (to cover split clause pattern vector).
+  -> [Pattern]
+     -- ^ Split clause pattern vector @qs@ (to be covered by clause pattern vector).
+  -> Match [Pattern]
+     -- ^ Result.
+     --   If 'Yes' the instantiation @rs@ such that @ps[rs] == qs@.
+matchPats [] [] = Yes []
+matchPats (p:ps) (q:qs) =
+  matchPat p q `combine` matchPats ps qs
+matchPats [] (_:_) = Yes []
+matchPats (_p:_ps) [] = Block BlockedOnApply []
+
+-- | Combine results of checking whether function clause patterns
+--   covers split clause patterns.
+--
+--   'No' is dominant: if one function clause pattern doesn't match then
+--   the whole clause doesn't match.
+--
+--   'Yes' is neutral: for a match, all patterns have to match.
+--
+--   'Block' accumulates variables of the split clause
+--   that have to be instantiated
+--   to make the split clause an instance of the function clause.
+combine :: (Match [Pattern]) -> Match [Pattern] -> Match [Pattern]
+combine m m' = case m of
+    Yes a -> case m' of
+      Yes b -> Yes (a <> b)
+      noOrBlock     -> noOrBlock
+    No    -> No
+    x@(Block r xs) -> case m' of
+      No    -> No
+      Block s ys -> Block (anyBlockedOnResult r s) (xs ++ ys)
+      Yes _ -> x
+
+anyBlockedOnResult :: BlockedOnResult -> BlockedOnResult -> BlockedOnResult
+anyBlockedOnResult b1 b2 = case (b1, b2) of
+  (NotBlockedOnResult, b2') -> b2'
+  (b1', NotBlockedOnResult) -> b1'
+  _ -> error $ 
+        "anyBlockedOnResult: Impossible " <> show b1 <> " and " <> show b2
