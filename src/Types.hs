@@ -117,11 +117,45 @@ type Telescope = [TBind]
 
 type TBind = (Name, Expr)
 
--- a clause has a list of patterns and the right hand side expression
-data Clause =
-  Clause [Pattern] Expr
-  | AbsurdClause [Pattern] -- absurd clauses don't have rhs
-  deriving (Eq, Show)
+-- | A clause is a list of patterns and the clause body.
+--
+--  The telescope contains the types of the pattern variables and the
+--  de Bruijn indices say how to get from the order the variables occur in
+--  the patterns to the order they occur in the telescope. The body
+--  binds the variables in the order they appear in the telescope.
+--
+--  @clauseTel ~ permute clausePerm (patternVars namedClausePats)@
+--
+--  Terms in dot patterns are valid in the clause telescope.
+--
+--  For the purpose of the permutation and the body dot patterns count
+--  as variables. TODO: Change this!
+data Clause = Clause
+    { clauseTel       :: Telescope
+      -- ^ @Δ@: The types of the pattern variables in dependency order.
+    -- , namedClausePats :: NAPs (Using Name instead atm)
+      -- ^ @Δ ⊢ ps@.  The de Bruijn indices refer to @Δ@.
+    , clauseBody      :: Maybe Expr
+      -- ^ @Just v@ with @Δ ⊢ v@ for a regular clause, or @Nothing@ for an
+      --   absurd one.
+    , clauseType      :: Maybe Value
+      -- ^ @Δ ⊢ t@.  The type of the rhs under @clauseTel@.
+    , clauseCatchall  :: Bool
+      -- ^ Clause has been labelled as CATCHALL.
+    -- , clauseRecursive   :: Maybe Bool TODO add this when termination checking
+      -- ^ @clauseBody@ contains recursive calls; computed by termination checker.
+      --   @Nothing@ means that termination checker has not run yet,
+      --   or that @clauseBody@ contains meta-variables;
+      --   these could be filled with recursive calls later!
+      --   @Just False@ means definitely no recursive call.
+      --   @Just True@ means definitely a recursive call.
+    , clauseUnreachable :: Maybe Bool
+      -- ^ Clause has been labelled as unreachable by the coverage checker.
+      --   @Nothing@ means coverage checker has not run yet (clause may be unreachable).
+      --   @Just False@ means clause is not unreachable.
+      --   @Just True@ means clause is unreachable.
+    }
+  deriving (Show)
 
 data Pattern
   = WildCardP -- wild card pattern
