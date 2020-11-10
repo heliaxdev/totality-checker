@@ -14,6 +14,7 @@ when yes, where).
 module Coverage.Match where
 
 import Types
+import qualified Data.List as List
 
 data Match a
   = Yes a -- (MATCH) -- the current neighbourhood matches a clause
@@ -31,13 +32,50 @@ data BlockedOnResult
 
 -- | Variable blocking a match
 data BlockingVar = BlockingVar
-  { blockingVarCons :: [Pattern] -- constructors in this position
+  { blockingVarName :: Maybe Name -- name of variable blocking the match
+    -- Nothing when it's a no name var/wildcard (TODO Will this be a problem?)
+  , blockingVarCons :: [Pattern] -- constructors in this position
   , blockingVarOverlap :: Bool 
   -- if at least one clause has a var pattern in this position
   }
   deriving (Show)
 
 type BlockingVars = [BlockingVar]
+
+-- | @choice m m'@ combines the match results @m@ of a function clause
+--   with the (already combined) match results $m'$ of the later clauses.
+--   It is for skipping clauses that definitely do not match ('No').
+--   It is left-strict, to be used with @foldr@.
+--   If one clause unconditionally matches ('Yes') we do not look further.
+choice :: Match a -> Match a -> Match a
+choice m m' = case m of
+  Yes a -> Yes a
+  Block r xs -> case m' of
+    Block s ys -> Block (choiceBlockedOnResult r s) $ zipBlockingVars xs ys
+    Yes _      -> Block r $ overlapping xs
+    No         -> Block r xs
+  No    -> m'
+
+setBlockingVarOverlap :: BlockingVar -> BlockingVar
+setBlockingVarOverlap = \x -> x { blockingVarOverlap = True }
+  
+overlapping :: BlockingVars -> BlockingVars
+overlapping = map setBlockingVarOverlap
+  
+-- | Left dominant merge of blocking vars.
+zipBlockingVars :: BlockingVars -> BlockingVars -> BlockingVars
+zipBlockingVars xs ys = map upd xs
+  where
+    upd (BlockingVar name cons o) = 
+      case List.find ((name ==) . blockingVarName) ys of
+        Just (BlockingVar _ cons' o') -> BlockingVar name (cons ++ cons') (o || o')
+        Nothing -> BlockingVar name cons True
+
+-- | Left dominant merge of `BlockedOnResult`.
+choiceBlockedOnResult :: BlockedOnResult -> BlockedOnResult -> BlockedOnResult
+choiceBlockedOnResult b1 b2 = case (b1,b2) of
+  (NotBlockedOnResult  , _                 ) -> NotBlockedOnResult
+  (BlockedOnApply    , _                 ) -> BlockedOnApply
 
 -- | @matchClause qs i c@ checks whether clause @c@
 --   covers a split clause with patterns @qs@.
@@ -89,8 +127,8 @@ matchPat p q = case p of
   SuccP _ -> error $ "matchPat: the user cannot enter SuccP as a pattern" 
   ConP name pats -> case q of 
     -- unDotP q >>= \case TODO undot a level
-    WildCardP -> Block NotBlockedOnResult [(BlockingVar [] False)]
-    VarP _ -> Block NotBlockedOnResult [(BlockingVar [] False)]
+    WildCardP -> Block NotBlockedOnResult [(BlockingVar Nothing [] False)]
+    VarP vname -> Block NotBlockedOnResult [(BlockingVar (Just vname) [] False)]
     ConP qname qs
       | name == qname -> matchPats pats qs
       | otherwise -> No
