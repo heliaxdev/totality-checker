@@ -39,6 +39,18 @@ data BlockingVar = BlockingVar
 
 type BlockingVars = [BlockingVar]
 
+-- | @matchClause qs i c@ checks whether clause @c@
+--   covers a split clause with patterns @qs@.
+matchClause ::
+  [Pattern]
+     -- ^ Split clause patterns @qs@.
+  -> Clause
+     -- ^ Clause @c@ to cover split clause.
+  -> Match [Pattern]
+     -- ^ Result.
+     --   If 'Yes' the instantiation @rs@ such that @(namedClausePats c)[rs] == qs@.
+matchClause qs c = matchPats (namedClausePats c) qs
+
 -- | Match the given patterns against a list of clauses
 -- if successful, return the index of the covering clause
 -- called by @cover@ in [Coverage.hs]

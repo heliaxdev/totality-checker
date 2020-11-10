@@ -2,6 +2,7 @@ module Evaluator where
 
 import Control.Monad.State ( MonadState(get) )
 import           Types
+import Data.Maybe (fromMaybe)
 
 -- Evaluation of a closure (expression, env) to a value
 -- the env provides bindings for the free variables occurring in e
@@ -90,11 +91,16 @@ eqVals _k _vl1 _vl2 = error "eqVals: mismatch number of arguments"
 
 -- pattern matching
 matchCls :: [Clause] -> [Value] -> TypeCheck (Maybe Value)
-matchCls [] _cll = return Nothing
-matchCls (Clause pl rhs:cl2) cll = do
-  x <- matchClause [] pl rhs cll
+matchCls [] _tys = return Nothing
+matchCls (cl1:cl2) tys = do
+  x <- 
+    matchClause 
+      [] 
+      (namedClausePats cl1) 
+      (fromMaybe (undefined) (clauseBody cl1)) --TODO absurd clause output
+      tys
   case x of
-    Nothing -> matchCls cl2 cll
+    Nothing -> matchCls cl2 tys
     Just v  -> return $ Just v
 
 matchClause :: Env -> [Pattern] -> Expr -> [Value] -> TypeCheck (Maybe Value)

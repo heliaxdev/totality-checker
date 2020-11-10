@@ -150,4 +150,4 @@ data Call =
 
 -- arity of a clause. All clauses of a function should have the same arity.
 arity :: Clause -> Int
-arity (Clause pl _) = length pl
+arity cl = length (namedClausePats cl)

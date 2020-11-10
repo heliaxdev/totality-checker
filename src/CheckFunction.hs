@@ -7,6 +7,7 @@ import           Evaluator           (eval)
 import Pattern ( checkDot, checkPats )
 import Coverage
 import           Types
+import Data.Maybe (fromMaybe)
 
 -- check a list of functions
 typeCheckFuns :: [(TypeSig, [Clause])] -> TypeCheck ()
@@ -42,14 +43,15 @@ checkFun' i e (c:cl) = do
 -- first we check the patterns (see module Pattern)
 -- and then the right hand side (e).
 checkClause :: Int -> Expr -> Clause -> TypeCheck ()
-checkClause _i e (Clause pl rhs) = do
+checkClause _i e cl = do
   v <- eval [] e
   -- phase 1: check accessible patterns & inst dot patterns
-  (k, flex, ins, rho, gamma, vt) <- checkPats 0 [] [] [] [] v pl
+  (k, flex, ins, rho, gamma, vt) <- 
+    checkPats 0 [] [] [] [] v (namedClausePats cl)
   -- phase 2: check inaccessible patterns
   mapM_ (checkDot k rho gamma ins) flex
   -- check the right hand side (e)
-  checkExpr k rho gamma rhs vt
+  checkExpr k rho gamma (fromMaybe (undefined) (clauseBody cl)) vt
 
 -- set the typechecked field in sig (of the function with name n) to True.
 enableSig :: (TypeSig, [Clause]) -> TypeCheck ()

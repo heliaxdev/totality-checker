@@ -135,6 +135,7 @@ data Clause = Clause
       -- ^ @Δ@: The types of the pattern variables in dependency order.
     -- , namedClausePats :: NAPs (Using Name instead atm)
       -- ^ @Δ ⊢ ps@.  The de Bruijn indices refer to @Δ@.
+    , namedClausePats :: [Pattern]
     , clauseBody      :: Maybe Expr
       -- ^ @Just v@ with @Δ ⊢ v@ for a regular clause, or @Nothing@ for an
       --   absurd one.
@@ -155,7 +156,7 @@ data Clause = Clause
       --   @Just False@ means clause is not unreachable.
       --   @Just True@ means clause is unreachable.
     }
-  deriving (Show)
+  deriving (Eq, Show)
 
 data Pattern
   = WildCardP -- wild card pattern
