@@ -1,3 +1,52 @@
-Function definitions with pattern matching may involve clauses that are unreachable or redundant. The patterns may also not be exhaustive. We want to warn users of all these cases. We implement a pattern matching coverage check that checks for all these cases.
+Function definitions with pattern matching may involve clauses that are unreachable or redundant. The patterns may also not be exhaustive. We want to warn users of all these cases. We implement a pattern matching coverage check that checks for all these cases. See the $\boldsymbol{src/Coverage}$ directory for the implementation.
 
-After the patterns are type checked, we transform the clauses into a split tree.
+\subsection{Split Trees}
+
+After the patterns are type checked (as in section \ref{sec:typeCheckPattern}), we transform the clauses into a \textit{split tree}. See $\boldsymbol{SplitTree.hs}$.
+
+Each split tree is associated with either 
+
+\begin{enumerate}
+  \item a constructor ($SplitCon$)
+  \item a literal ($SplitLit$)
+  \item a catchall branch ($SplitCatchall$)
+\end{enumerate}
+
+A $SplitTag$ is added to each split tree to include this information. 
+
+Each node of the split tree is either at an end ($SplittingDone$) or there is another split ($SplitAt$), which has sub-split trees for each of the constructors (of type $SplitTrees' a$, which is a list of constructor names and split trees mapping).
+
+\subsection{Coverage Algorithm}
+
+This algorithm works on function definitions with overlapping clauses. When two clauses overlap, the top most clause takes priority.
+
+We first compute a single \textit{covering} from a sequence of exhaustive but possibly overlapping clauses.
+
+\subsubsection{Covering}
+
+For full details see \textit{Pattern Matching with Dependent Types} by Thierry Coquand.
+
+A \textit{covering} of a common context $\Delta$ is a system of contextual mapping $S_i : \Delta_i \to \Delta$ if
+
+\begin{enumerate}
+  \item the identity interpretation $\Delta -> \Delta$ is a covering of $\Delta$ and
+  \item if $S : \Gamma \to \Delta$ is a contextual mapping such that $x_iS$ is in constructor form, then there exists one and only one $j \leq m$ and $T : \Gamma \to \Gamma_j$ such that $S = T;S_j$. 
+\end{enumerate}
+
+For example, the following contextual mappings are a covering of the context $\boldsymbol{\Delta = x : N, y : N}$
+
+\begin{itemize}
+  \item ${x := 0} : (y : N) \to \Delta$,
+  \item ${x := succ(x_1), y:= 0} : (x_1 : N) \to \Delta$ and
+  \item ${x := succ(x_1), y:= succ(y_1)} : (x_1 : N, y_1 : N) \to \Delta$
+\end{itemize}
+
+A \textit{neighbourhood} of a context is any contextual map that is part of a covering of this context. For example, 
+
+\[
+  {x := 0} : (y : N) \to \Delta
+\] is a neighbourhood of context $\Delta$ in the above example.
+
+\subsubsection{Building a Covering}
+
+

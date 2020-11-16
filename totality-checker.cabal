@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 460b7348e793167b16db7b8168798747e108192ab7b2876ed729cac643c02457
+-- hash: adf5fd6ba99984404bd2d4c7af73bbd3b0db8907d75b2844d968379127b91017
 
 name:           totality-checker
 version:        0.1.0.0
@@ -27,7 +27,6 @@ source-repository head
 
 library
   exposed-modules:
-      CaseTree
       CheckDataType
       CheckExpr
       CheckFunction

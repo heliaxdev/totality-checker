@@ -24,10 +24,10 @@ type SplitTrees = SplitTrees' SplitTag
 --   only used for splitting on a literal type).
 data SplitTag
   = SplitCon Name
+  | SplitCatchall
   deriving (Show)
--- | SplitLit Literal TODO?
--- | SplitCatchall
-  
+-- | SplitLit Literal TODO
+
 -- | Abstract case tree shape.
 data SplitTree' a
   = -- | No more splits coming. We are at a single, all-variable
