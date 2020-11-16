@@ -48,3 +48,9 @@ data SplitTree' a
 --   random access.
 type SplitTrees' a = [(a, SplitTree' a)]
   
+-- A variable in the pattern of a split clause
+data SplitPatVarT = SplitPatVar
+  { splitPatVarName :: Name -- the variable name
+  , splitPatVarIndex :: Int -- the de Bruijn index of the variable
+  -- , splitExcludedLits :: [Literal] TODO the literals excluded by previous matches.    
+  }
