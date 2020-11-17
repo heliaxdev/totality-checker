@@ -20,20 +20,39 @@ Each node of the split tree is either at an end ($SplittingDone$) or there is an
 
 This algorithm works on function definitions with overlapping clauses. When two clauses overlap, the top most clause takes priority.
 
-We first compute a single \textit{covering} from a sequence of exhaustive but possibly overlapping clauses.
+Given the list of clauses provided by the user, we compute a single \textit{covering} from a sequence of exhaustive but possibly overlapping clauses.
 
-\subsubsection{Covering}
+To compute a covering, we first compute \textit{an elementary covering}.
+
+\subsubsection{Elementary and General Covering}
 
 For full details see \textit{Pattern Matching with Dependent Types} by Thierry Coquand.
 
-A \textit{covering} of a common context $\Delta$ is a system of contextual mapping $S_i : \Delta_i \to \Delta$ if
+An \textit{elementary covering} of a common context $\Delta = x_1 : A_1,...x_n : A_n$ is a system of context mappings $S_1 : \Gamma_1 \to \Delta, ..., S_m : \Gamma_m \to \Delta$ iff there exists an index $\boldsymbol{i < n}$ such that
+
+\begin{enumerate}
+  \item all terms $x_iS_j : A_iS_j(\Delta_j)$, for $j \leq m$, are in constructor form and
+  \item if $S : \Gamma \to \Delta$ is a context mapping such that $x_iS$ is in constructor form, then there exists one and only one $j \leq m$ and $T : \Gamma \to \Gamma_j$ such that $S=T;S_j$.
+  
+\end{enumerate}
+
+For example, the context mappings
+
+\begin{itemize}
+  \item $x = 0$
+  \item $x = succ(y) (y : N)$
+\end{itemize}
+
+is the elementary covering of the context $x : N$
+
+A \textit{covering} of a common context $\Delta$ is a system of context mappings $S_i : \Delta_i \to \Delta$ if
 
 \begin{enumerate}
   \item the identity interpretation $\Delta -> \Delta$ is a covering of $\Delta$ and
-  \item if $S : \Gamma \to \Delta$ is a contextual mapping such that $x_iS$ is in constructor form, then there exists one and only one $j \leq m$ and $T : \Gamma \to \Gamma_j$ such that $S = T;S_j$. 
+  \item if $S : \Gamma \to \Delta$ is a context mapping such that $x_iS$ is in constructor form, then there exists one and only one $j \leq m$ and $T : \Gamma \to \Gamma_j$ such that $S = T;S_j$. 
 \end{enumerate}
 
-For example, the following contextual mappings are a covering of the context $\boldsymbol{\Delta = x : N, y : N}$
+For example, the following context mappings are a covering of the context $\boldsymbol{\Delta = x : N, y : N}$
 
 \begin{itemize}
   \item ${x := 0} : (y : N) \to \Delta$,
@@ -41,7 +60,7 @@ For example, the following contextual mappings are a covering of the context $\b
   \item ${x := succ(x_1), y:= succ(y_1)} : (x_1 : N, y_1 : N) \to \Delta$
 \end{itemize}
 
-A \textit{neighbourhood} of a context is any contextual map that is part of a covering of this context. For example, 
+A \textit{neighbourhood} of a context is any context mapping that is part of a covering of this context. For example, 
 
 \[
   {x := 0} : (y : N) \to \Delta
@@ -49,4 +68,11 @@ A \textit{neighbourhood} of a context is any contextual map that is part of a co
 
 \subsubsection{Building a Covering}
 
+To build a covering of context 
+
+\[\Delta = x_1 : A_1, ..., x_n : A_m\], we first build elementary coverings by \textit{splitting the context $\Delta$ along i}, where $i \leq n$ and $A_i$ is a small type.
+
+If $A_i$ is not a small type or if it is not in constructor form, then the algorithm fails to produce any covering.
+
+Otherwise, we list all the constructors of type $A_i$ and perform unification. This generates a set of new context mappings where $x_i$ has been instantiated with an application of each of the constructors to fresh variables. (See $matchPat$ in $\boldsymbol{Match.hs}$)
 

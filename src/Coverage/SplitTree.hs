@@ -12,7 +12,7 @@ each leaf of the split tree.
 
 module Coverage.SplitTree where
 
-import Types ( Name )
+import Types
   
 -- | Branches in a case tree.
 
@@ -47,10 +47,3 @@ data SplitTree' a
 --   so many constructors per data type, and there is no need for
 --   random access.
 type SplitTrees' a = [(a, SplitTree' a)]
-  
--- A variable in the pattern of a split clause
-data SplitPatVarT = SplitPatVar
-  { splitPatVarName :: Name -- the variable name
-  , splitPatVarIndex :: Int -- the de Bruijn index of the variable
-  -- , splitExcludedLits :: [Literal] TODO the literals excluded by previous matches.    
-  }

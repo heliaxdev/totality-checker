@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-| Matcher for coverage checking. Given
 
     1. the function clauses @cs@
@@ -15,7 +14,7 @@ module Coverage.Match where
 
 import Types
 import qualified Data.List as List
-
+import GHC.Base (Nat)
 data Match a
   = Yes a -- (MATCH) -- the current neighbourhood matches a clause
   | No -- (MISSED) -- the current neighbourhood fails to match all clauses
@@ -24,7 +23,14 @@ data Match a
     , blockedOnVars :: BlockingVars
     }
   deriving (Show)
+-- A variable in the pattern of a split clause
+data SplitPattern = SplitPatVar
+  { splitPatVar :: Pattern -- the pattern (with names)
+  , splitPatVarIndex :: Int -- the de Bruijn index of the variable
+  -- , splitExcludedLits :: [Literal] TODO the literals excluded by previous matches.    
+  }
 
+type SplitInstantiation = [(Nat, SplitPattern)]
 data BlockedOnResult
   = BlockedOnApply -- Blocked on un-introduced argument
   | NotBlockedOnResult
@@ -80,11 +86,11 @@ choiceBlockedOnResult b1 b2 = case (b1,b2) of
 -- | @matchClause qs i c@ checks whether clause @c@
 --   covers a split clause with patterns @qs@.
 matchClause ::
-  [Pattern]
+  [SplitPattern]
      -- ^ Split clause patterns @qs@.
   -> Clause
      -- ^ Clause @c@ to cover split clause.
-  -> Match [Pattern]
+  -> Match SplitInstantiation
      -- ^ Result.
      --   If 'Yes' the instantiation @rs@ such that @(namedClausePats c)[rs] == qs@.
 matchClause qs c = matchPats (namedClausePats c) qs
@@ -113,24 +119,29 @@ matchClause qs c = matchPats (namedClausePats c) qs
 matchPat ::
   Pattern
   -- ^ Clause pattern @p@ (to cover split clause pattern).
-  -> Pattern
+  -> SplitPattern
      -- ^ Split clause pattern @q@ (to be covered by clause pattern).
-  -> Match [Pattern]
+  -> Match SplitInstantiation
      -- ^ Result.
      --   If 'Yes', also the instantiation @rs@ of the clause pattern variables
      --   to produce the split clause pattern, @p[rs] = q@.
 matchPat p q = case p of
-  WildCardP -> Yes [q]
-  VarP _   -> Yes [q]
+  WildCardP -> Yes [(undefined,q)]
+  VarP _   -> Yes [(undefined,q)]
   DotP _ -> Yes []
   AbsurdP -> No -- AbsurdP will never be matched
   SuccP _ -> error $ "matchPat: the user cannot enter SuccP as a pattern" 
-  ConP name pats -> case q of 
+  ConP name pats -> case splitPatVar q of 
     -- unDotP q >>= \case TODO undot a level
-    WildCardP -> Block NotBlockedOnResult [(BlockingVar Nothing [] False)]
-    VarP vname -> Block NotBlockedOnResult [(BlockingVar (Just vname) [] False)]
+    WildCardP -> Block NotBlockedOnResult [BlockingVar Nothing [] False]
+    VarP vname -> Block NotBlockedOnResult [BlockingVar (Just vname) [] False]
     ConP qname qs
-      | name == qname -> matchPats pats qs
+      | name == qname -> 
+          matchPats 
+            pats 
+            [SplitPatVar (ConP qname qs) (splitPatVarIndex q)] 
+            -- TODO ^is this right? Should each of the pat in qs
+            -- be a SplitPatVar?
       | otherwise -> No
     DotP _ -> No
     AbsurdP -> No
@@ -152,9 +163,9 @@ matchPat p q = case p of
 matchPats ::
   [Pattern]
      -- ^ Clause pattern vector @ps@ (to cover split clause pattern vector).
-  -> [Pattern]
+  -> [SplitPattern]
      -- ^ Split clause pattern vector @qs@ (to be covered by clause pattern vector).
-  -> Match [Pattern]
+  -> Match SplitInstantiation
      -- ^ Result.
      --   If 'Yes' the instantiation @rs@ such that @ps[rs] == qs@.
 matchPats [] [] = Yes []
@@ -174,7 +185,8 @@ matchPats (_p:_ps) [] = Block BlockedOnApply []
 --   'Block' accumulates variables of the split clause
 --   that have to be instantiated
 --   to make the split clause an instance of the function clause.
-combine :: (Match [Pattern]) -> Match [Pattern] -> Match [Pattern]
+combine :: 
+  Match SplitInstantiation -> Match SplitInstantiation -> Match SplitInstantiation
 combine m m' = case m of
     Yes a -> case m' of
       Yes b -> Yes (a <> b)
