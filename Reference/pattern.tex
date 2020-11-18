@@ -14,7 +14,7 @@ Each split tree is associated with either
 
 A $SplitTag$ is added to each split tree to include this information. 
 
-Each node of the split tree is either at an end ($SplittingDone$) or there is another split ($SplitAt$), which has sub-split trees for each of the constructors (of type $SplitTrees' a$, which is a list of constructor names and split trees mapping).
+Each node of the split tree is either at an end ($SplittingDone$) or there is another split ($SplitAt$) of type $SplitTrees' a$, which is a list of constructor names and split trees mapping. It has sub-split trees for each of the constructors.
 
 \subsection{Coverage Algorithm}
 
@@ -66,13 +66,49 @@ A \textit{neighbourhood} of a context is any context mapping that is part of a c
   {x := 0} : (y : N) \to \Delta
 \] is a neighbourhood of context $\Delta$ in the above example.
 
-\subsubsection{Building a Covering}
+\subsubsection{Building a Covering (See $\boldsymbol{Coverage/Match.hs}$ and $\boldsymbol{Coverage.hs}$)} 
 
-To build a covering of context 
+The algorithm starts with matching the initial context mapping (neighbourhood) with one of the clauses. We start the matching from the first clause. When there are terms that causes the matching to be indecisive (we call these terms \textit{blockers}), we perform an operation called \textit{splitting the context along $i$}, given $i$ is a blocker. As we split the context we yield neighbourhoods which we continue to match with the clauses. We perform context splitting recursively until the current neighbourhood matches one of the original clauses. When matching is successful, we return the covering. If the current neighbourhood fails to match all the given clauses, the clauses are not exhaustive and we terminate with coverage failure.
 
-\[\Delta = x_1 : A_1, ..., x_n : A_m\], we first build elementary coverings by \textit{splitting the context $\Delta$ along i}, where $i \leq n$ and $A_i$ is a small type.
+For example, for the following function:
 
-If $A_i$ is not a small type or if it is not in constructor form, then the algorithm fails to produce any covering.
+\begin{lstlisting}[language=haskell]
+  plus :: Nat -> Nat -> Nat
+  plus x zero = x
+  plus zero y = y
+  plus (succ x) (succ y) = succ (x plus y)
+\end{lstlisting}
 
-Otherwise, we list all the constructors of type $A_i$ and perform unification. This generates a set of new context mappings where $x_i$ has been instantiated with an application of each of the constructors to fresh variables. (See $matchPat$ in $\boldsymbol{Match.hs}$)
+We start out with the context mapping
 
+\[
+  x; y : (x \ y : Nat) \to (x \ y : Nat)
+\]
+
+Because none of the clauses has $x$, $y$ as the patterns, we do not match any clause. We split along the blocker $y$. ($x$ successfully matches with $x$, so it's not a blocker). 
+ 
+To split the context along $y$, we list all the constructors of type $Nat$ and perform unification. This generates a set of new context mappings where $y$ has been instantiated with an application of each of the constructors to fresh variables. In the example, we get the following neighbourhoods:
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      \delta_1 & = & x; zero : (x : Nat) \to (x \ y : Nat) \\
+      \delta_2 & = & x; (succ \ y) : (x \ y : Nat) \to (x \ y : Nat) \\
+    \end{aligned}
+  \end{equation*}
+\end{figure}
+
+Because $\delta_1$ matches the first clause, we can return the first clause as the covering. Now we need to match on $\delta_2$.
+
+$\delta_2$ fails to match on the first clause so we move on to the second clause which is inconclusive (the variable $x$ is matching against the constructor $zero$). We move on to the third clause and we have the same conclusive result. The blocker is now $x$ so we split the context along $x$, and yield the following neighbourhoods:
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      \delta_3 & = & zero; (succ \ y) : (y : Nat) \to (x \ y : Nat) \\
+      \delta_4 & = & (succ \ x); (succ \ y) : (x \ y : Nat) \to (x \ y : Nat) \\
+    \end{aligned}
+  \end{equation*}
+\end{figure}
+
+Now $\delta_3$ matches the second clause with the substitution $y = succ \ y$. We return the second clause as the covering. $\delta_4$ matches the third clause and we have finished building the covering from all neighbourhoods.
