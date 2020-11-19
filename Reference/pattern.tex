@@ -48,7 +48,7 @@ is the elementary covering of the context $x : N$
 A \textit{covering} of a common context $\Delta$ is a system of context mappings $S_i : \Delta_i \to \Delta$ if
 
 \begin{enumerate}
-  \item the identity interpretation $\Delta -> \Delta$ is a covering of $\Delta$ and
+  \item the identity interpretation $\Delta \to \Delta$ is a covering of $\Delta$ and
   \item if $S : \Gamma \to \Delta$ is a context mapping such that $x_iS$ is in constructor form, then there exists one and only one $j \leq m$ and $T : \Gamma \to \Gamma_j$ such that $S = T;S_j$. 
 \end{enumerate}
 
@@ -100,7 +100,7 @@ To split the context along $y$, we list all the constructors of type $Nat$ and p
 
 Because $\delta_1$ matches the first clause, we can return the first clause as the covering. Now we need to match on $\delta_2$.
 
-$\delta_2$ fails to match on the first clause so we move on to the second clause which is inconclusive (the variable $x$ is matching against the constructor $zero$). We move on to the third clause and we have the same conclusive result. The blocker is now $x$ so we split the context along $x$, and yield the following neighbourhoods:
+$\delta_2$ fails to match on the first clause so we move on to the second clause which is inconclusive (the variable $x$ is matching against the constructor $zero$). We move on to the third clause and we have the same inconclusive result. The blocker is now $x$ so we split the context along $x$, and yield the following neighbourhoods:
 
 \begin{figure}[H]
   \begin{equation*}
