@@ -112,3 +112,53 @@ $\delta_2$ fails to match on the first clause so we move on to the second clause
 \end{figure}
 
 Now $\delta_3$ matches the second clause with the substitution $y = succ \ y$. We return the second clause as the covering. $\delta_4$ matches the third clause and we have finished building the covering from all neighbourhoods.
+
+Consider the following example with dependent types:
+
+\begin{lstlisting}[language=haskell]
+  typeOfX :: (x :: Nat) -> Type
+  typeOfX zero = Nat
+  typeOfX (succ _) = Bool
+  
+  plus2 :: (x :: Nat) -> (y :: typeOfX x) -> Nat
+  plus2 zero y = y
+  plus2 (succ z) True = z
+  plus2 (succ z) False = succ (succ z)
+\end{lstlisting}
+
+To check the coverage of $plus2$, we start with the neighbourhood 
+
+\[
+  x;y: (x : Nat)(y : typeOfX \ x) \to (x : Nat)(y : typeOfX \ x)
+\]
+
+Matching the neighbourhood with the first clause, we see that $x$ is a blocker, so we split the context along $x$ and yield the following neighbourhoods:
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      \delta_1 & = & zero; y : (y : typeOfX \ zero) \to (x : Nat)(y : typeOfX \ x) \\
+      \delta_2 & = & (succ \ x); y : (x : Nat)(y : typeOfX (succ \ x)) \to (x : Nat)(y : typeOfX x) \\
+    \end{aligned}
+  \end{equation*}
+\end{figure}
+
+Matching $\delta_1$ with the first clause is successful. We can return the first clause. 
+
+Matching $\delta_2$ with the first clause fails because $zero$ and $succ$ are different constructors and cannot be unified. Moving on to matching it with the second clause.
+
+The second and third clauses are both inconclusive matches because of blocker $y$. Splitting the context along $y$.
+
+To split the context along $y$, $y$ needs to be of type $small \ type$ such that we can list all of the constructors of that type. Because $y : typeOfX (succ \ x)$ and $typeOfX (succ \ x) = Bool$, we yield the following neighbourhoods:
+
+\begin{figure}[H]
+  \begin{equation*}
+    \begin{aligned}
+      \delta_3 & = & (succ \ x);True : (x : Nat) \to (x : Nat)(y : typeOfX \ x) \\
+      \delta_4 & = & (succ \ x);False : (x: Nat) \to (x : Nat)(y : typeOfX \ x) \\
+    \end{aligned}
+  \end{equation*}
+\end{figure}
+
+With the substitution $x = y$, $\delta_3$ matches the second clause and $\delta_4$ matches the third clause. All neighbourhoods are matched with all clauses returned. The coverage check confirms that the function clauses covers all cases.
+
