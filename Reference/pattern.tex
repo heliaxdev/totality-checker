@@ -26,7 +26,7 @@ To compute a covering, we first compute \textit{an elementary covering}.
 
 \subsubsection{Elementary and General Covering}
 
-For full details see \textit{Pattern Matching with Dependent Types} by Thierry Coquand.
+For full details see \textit{Pattern Matching with Dependent Types} by Thierry Coquand. My notations are a hybrid of Coquand and Norell's.
 
 An \textit{elementary covering} of a common context $\Delta = x_1 : A_1,...x_n : A_n$ is a system of context mappings $S_1 : \Gamma_1 \to \Delta, ..., S_m : \Gamma_m \to \Delta$ iff there exists an index $\boldsymbol{i < n}$ such that
 
@@ -36,14 +36,12 @@ An \textit{elementary covering} of a common context $\Delta = x_1 : A_1,...x_n :
   
 \end{enumerate}
 
-For example, the context mappings
+For example, the elementary covering of the context $\Delta = x : N$ are the context mappings
 
 \begin{itemize}
-  \item $x = 0$
-  \item $x = succ(y) (y : N)$
+  \item $\{x := 0\} \to \Delta$
+  \item $\{x := succ \ y \} : (y : N) \to \Delta$
 \end{itemize}
-
-is the elementary covering of the context $x : N$
 
 A \textit{covering} of a common context $\Delta$ is a system of context mappings $S_i : \Delta_i \to \Delta$ if
 
@@ -55,15 +53,15 @@ A \textit{covering} of a common context $\Delta$ is a system of context mappings
 For example, the following context mappings are a covering of the context $\boldsymbol{\Delta = x : N, y : N}$
 
 \begin{itemize}
-  \item ${x := 0} : (y : N) \to \Delta$,
-  \item ${x := succ(x_1), y:= 0} : (x_1 : N) \to \Delta$ and
-  \item ${x := succ(x_1), y:= succ(y_1)} : (x_1 : N, y_1 : N) \to \Delta$
+  \item $\{x := 0, y\} : (y : N) \to \Delta$,
+  \item $\{x := succ(x_1), y:= 0\} : (x_1 : N) \to \Delta$ and
+  \item $\{x := succ(x_1), y:= succ(y_1)\} : (x_1 : N, y_1 : N) \to \Delta$
 \end{itemize}
 
 A \textit{neighbourhood} of a context is any context mapping that is part of a covering of this context. For example, 
 
 \[
-  {x := 0} : (y : N) \to \Delta
+  \{x := 0, y\} : (y : N) \to \Delta
 \] is a neighbourhood of context $\Delta$ in the above example.
 
 \subsubsection{Building a Covering (See $\boldsymbol{Coverage/Match.hs}$ and $\boldsymbol{Coverage.hs}$)} 
@@ -79,39 +77,39 @@ For example, for the following function:
   plus (succ x) (succ y) = succ (x plus y)
 \end{lstlisting}
 
-We start out with the context mapping
+We start out with the context mapping/neighbourhood
 
 \[
-  x; y : (x \ y : Nat) \to (x \ y : Nat)
+  \{x,y\} : (x \ y : Nat) \to (x \ y : Nat)
 \]
 
-Because none of the clauses has $x$, $y$ as the patterns, we do not match any clause. We split along the blocker $y$. ($x$ successfully matches with $x$, so it's not a blocker). 
+Because none of the clauses has $x$, $y$ as the patterns, we do not match any clause. Hence, we split the context along the blocker $y$. ($x$ successfully matches with $x$, so it's not a blocker). 
  
 To split the context along $y$, we list all the constructors of type $Nat$ and perform unification. This generates a set of new context mappings where $y$ has been instantiated with an application of each of the constructors to fresh variables. In the example, we get the following neighbourhoods:
 
 \begin{figure}[H]
   \begin{equation*}
     \begin{aligned}
-      \delta_1 & = & x; zero : (x : Nat) \to (x \ y : Nat) \\
-      \delta_2 & = & x; (succ \ y) : (x \ y : Nat) \to (x \ y : Nat) \\
+      \delta_1 & = & \{x, y := zero\} : (x : Nat) \to (x \ y : Nat) \\
+      \delta_2 & = & \{x, y := succ \ y\} : (x \ y : Nat) \to (x \ y : Nat) \\
     \end{aligned}
   \end{equation*}
 \end{figure}
 
-Because $\delta_1$ matches the first clause, we can return the first clause as the covering. Now we need to match on $\delta_2$.
+Because $\delta_1$ matches the first clause, we can return the first clause as the covering clause. Now we need to match $\delta_2$.
 
 $\delta_2$ fails to match on the first clause so we move on to the second clause which is inconclusive (the variable $x$ is matching against the constructor $zero$). We move on to the third clause and we have the same inconclusive result. The blocker is now $x$ so we split the context along $x$, and yield the following neighbourhoods:
 
 \begin{figure}[H]
   \begin{equation*}
     \begin{aligned}
-      \delta_3 & = & zero; (succ \ y) : (y : Nat) \to (x \ y : Nat) \\
-      \delta_4 & = & (succ \ x); (succ \ y) : (x \ y : Nat) \to (x \ y : Nat) \\
+      \delta_3 & = & \{x := zero, y := succ \ y\} : (y : Nat) \to (x \ y : Nat) \\
+      \delta_4 & = & \{x := succ \ x; y := succ \ y\} : (x \ y : Nat) \to (x \ y : Nat) \\
     \end{aligned}
   \end{equation*}
 \end{figure}
 
-Now $\delta_3$ matches the second clause with the substitution $y = succ \ y$. We return the second clause as the covering. $\delta_4$ matches the third clause and we have finished building the covering from all neighbourhoods.
+Now $\delta_3$ matches the second clause with the substitution $y = succ \ y$. We return the second clause as the covering clause. $\delta_4$ matches the third clause and we have finished building the covering from all neighbourhoods. The covering clauses are all three clauses.
 
 Consider the following example with dependent types:
 
@@ -129,7 +127,7 @@ Consider the following example with dependent types:
 To check the coverage of $plus2$, we start with the neighbourhood 
 
 \[
-  x;y: (x : Nat)(y : typeOfX \ x) \to (x : Nat)(y : typeOfX \ x)
+  \{x,y\} : (x : Nat)(y : typeOfX \ x) \to (x : Nat)(y : typeOfX \ x)
 \]
 
 Matching the neighbourhood with the first clause, we see that $x$ is a blocker, so we split the context along $x$ and yield the following neighbourhoods:
@@ -137,8 +135,8 @@ Matching the neighbourhood with the first clause, we see that $x$ is a blocker, 
 \begin{figure}[H]
   \begin{equation*}
     \begin{aligned}
-      \delta_1 & = & zero; y : (y : typeOfX \ zero) \to (x : Nat)(y : typeOfX \ x) \\
-      \delta_2 & = & (succ \ x); y : (x : Nat)(y : typeOfX (succ \ x)) \to (x : Nat)(y : typeOfX x) \\
+      \delta_1 & = & \{x := zero, y\} : (y : typeOfX \ zero) \to (x : Nat)(y : typeOfX \ x) \\
+      \delta_2 & = & \{x := succ \ x, y\} : (x : Nat)(y : typeOfX (succ \ x)) \to (x : Nat)(y : typeOfX x) \\
     \end{aligned}
   \end{equation*}
 \end{figure}
@@ -154,11 +152,11 @@ To split the context along $y$, $y$ needs to be of type $small \ type$ such that
 \begin{figure}[H]
   \begin{equation*}
     \begin{aligned}
-      \delta_3 & = & (succ \ x);True : (x : Nat) \to (x : Nat)(y : typeOfX \ x) \\
-      \delta_4 & = & (succ \ x);False : (x: Nat) \to (x : Nat)(y : typeOfX \ x) \\
+      \delta_3 & = & \{x := succ \ x, y := True\} : (x : Nat) \to (x : Nat)(y : typeOfX \ x) \\
+      \delta_4 & = & \{x := succ \ x, y := False\} : (x: Nat) \to (x : Nat)(y : typeOfX \ x) \\
     \end{aligned}
   \end{equation*}
 \end{figure}
 
-With the substitution $x = y$, $\delta_3$ matches the second clause and $\delta_4$ matches the third clause. All neighbourhoods are matched with all clauses returned. The coverage check confirms that the function clauses covers all cases.
+With the substitution $x = z$, $\delta_3$ matches the second clause and $\delta_4$ matches the third clause. All neighbourhoods are matched with all clauses returned. The coverage check confirms that the function clauses covers all cases.
 
