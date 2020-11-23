@@ -45,7 +45,8 @@ checkPattern k flex ins rho gamma (VPi x av env b) (ConP n pl) = do
   let ConSig vc = lookupSig n sig
   -- check the list of patterns of the constructor,
   -- updating the list of dot pattern and their types & substitutions
-  (k', flex', ins', rho', gamma', vc') <- checkPats k flex ins rho gamma vc pl
+  (k', flex', ins', rho', gamma', vc') 
+    <- checkPats k flex ins rho gamma vc (splitPatsToPats pl)
   let flexgen = map fst flex'
   -- instantiate flex variables with unification,
   -- the problem equation is {vc' = av}, sub is the solution
@@ -172,7 +173,7 @@ p2v k p =
     ConP n [] -> (VCon n, k)
     -- con patterns with pattern list pl are app of Con to the patterns.
     ConP n pl ->
-      let (vl, k') = ps2vs k pl
+      let (vl, k') = ps2vs k (splitPatsToPats pl)
        in (VApp (VCon n) vl, k')
     SuccP _p ->
       let (v, k') = p2v k p

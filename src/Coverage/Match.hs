@@ -14,7 +14,6 @@ module Coverage.Match where
 
 import Types
 import qualified Data.List as List
-import GHC.Base (Nat)
 data Match a
   = Yes a -- (MATCH) -- the current neighbourhood matches a clause
   | No -- (MISSED) -- the current neighbourhood fails to match all clauses
@@ -24,7 +23,7 @@ data Match a
     }
   deriving (Show)
 
-type SplitInstantiation = [(Nat, SplitPattern)]
+type SplitInstantiation = [(Int, SplitPattern)]
 data BlockedOnResult
   = BlockedOnApply -- Blocked on un-introduced argument
   | NotBlockedOnResult
@@ -87,7 +86,7 @@ matchClause ::
   -> Match SplitInstantiation
      -- ^ Result.
      --   If 'Yes' the instantiation @rs@ such that @(namedClausePats c)[rs] == qs@.
-matchClause qs cl = matchPats (clToPatL cl) qs
+matchClause qs cl = matchPats (namedClausePats cl) qs
 
 -- | Match the given patterns against a list of clauses
 -- if successful, return the index of the covering clause
@@ -111,7 +110,7 @@ matchClause qs cl = matchPats (clToPatL cl) qs
 --      a cover if @q@ was split on variable @x@.
 
 matchPat ::
-  Pattern
+  SplitPattern
   -- ^ Clause pattern @p@ (to cover split clause pattern).
   -> SplitPattern
      -- ^ Split clause pattern @q@ (to be covered by clause pattern).
@@ -119,9 +118,9 @@ matchPat ::
      -- ^ Result.
      --   If 'Yes', also the instantiation @rs@ of the clause pattern variables
      --   to produce the split clause pattern, @p[rs] = q@.
-matchPat p q = case p of
-  WildCardP -> Yes [(undefined,q)]
-  VarP _   -> Yes [(undefined,q)]
+matchPat p q = case splitPatVar p of
+  WildCardP -> Yes [(splitPatVarIndex p,q)]
+  VarP _   -> Yes [(splitPatVarIndex p,q)]
   DotP _ -> Yes []
   AbsurdP -> No -- AbsurdP will never be matched
   SuccP _ -> error $ "matchPat: the user cannot enter SuccP as a pattern" 
@@ -133,9 +132,7 @@ matchPat p q = case p of
       | name == qname -> 
           matchPats 
             pats 
-            [SplitPatVar (ConP qname qs) (splitPatVarIndex q)] 
-            -- TODO ^is this right? Should each of the pat in qs
-            -- be a SplitPatVar?
+            qs 
       | otherwise -> No
     DotP _ -> No
     AbsurdP -> No
@@ -155,7 +152,7 @@ matchPat p q = case p of
 -- | @matchPats ps qs@ checks whether a function clause with patterns
 --   @ps@ covers a split clause with patterns @qs@.
 matchPats ::
-  [Pattern]
+  [SplitPattern]
      -- ^ Clause pattern vector @ps@ (to cover split clause pattern vector).
   -> [SplitPattern]
      -- ^ Split clause pattern vector @qs@ (to be covered by clause pattern vector).

@@ -81,7 +81,8 @@ exprToPattern (Succ e) =
 exprToPattern (App (Con n) el) =
   case exprsToPatterns el of
     Nothing -> Nothing
-    Just pl -> Just $ ConP n pl
+    Just pl -> Just $ ConP n undefined
+-- ^ pl need to initialized all the pats with their indices?
 exprToPattern (Con n) = Just $ ConP n []
 exprToPattern _ = Nothing
 
@@ -111,11 +112,11 @@ compareExpr (Con n1) (ConP n2 []) =
     else Un
 compareExpr (App (Con n1) [e1]) (ConP n2 [p1]) =
   if n1 == n2
-    then compareExpr e1 p1
+    then compareExpr e1 (splitPatVar p1)
     else Un
 compareExpr (App (Con n1) args) (ConP n2 pl) =
   if n1 == n2 && length args == length pl
-    then minL $ concatMap (\e -> (map (compareExpr e) pl)) args
+    then minL $ concatMap (\e -> (map (compareExpr e) (splitPatsToPats pl))) args
     else Un
 compareExpr (Succ e2) (SuccP p2) = compareExpr e2 p2
 compareExpr _ _ = Un
@@ -125,7 +126,8 @@ compareVar n (VarP n2) =
   if n == n2
     then Le
     else Un
-compareVar n (ConP _c (p:pl)) = times Lt (maxL (map (compareVar n) (p : pl)))
+compareVar n (ConP _c (p:pl)) = 
+  times Lt (maxL (map (compareVar n) (splitPatVar p : (map splitPatVar pl))))
 compareVar n (SuccP p2) = times Lt (compareVar n p2)
 compareVar n (DotP e) =
   case exprToPattern e of

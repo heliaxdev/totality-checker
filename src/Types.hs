@@ -168,7 +168,7 @@ data Pattern
   = WildCardP -- wild card pattern
   -- | LiteralP Literal -- literal pattern TODO
   | VarP Name -- variable pattern
-  | ConP Name [Pattern] -- constructor pattern
+  | ConP Name [SplitPattern] -- constructor pattern
   | DotP Expr -- forced/inaccessible pattern
   | AbsurdP -- absurd pattern
   | SuccP Pattern -- size successor pattern
@@ -183,6 +183,9 @@ data SplitPattern = SplitPatVar
   
 clToPatL :: Clause -> [Pattern]
 clToPatL cl = map splitPatVar (namedClausePats cl)
+
+splitPatsToPats :: [SplitPattern] -> [Pattern]
+splitPatsToPats = map splitPatVar
 
 emptySig :: Signature
 emptySig = Map.empty

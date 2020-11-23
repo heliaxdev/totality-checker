@@ -123,7 +123,7 @@ match env (ConP name []) (VCon y)
   | name == y = return $ Just env
   | otherwise = return Nothing
 match env (ConP name pl) (VApp (VCon y) vl)
-  | name == y = matchList env pl vl
+  | name == y = matchList env (splitPatsToPats pl) vl
   | otherwise = return Nothing
 match env (SuccP p') VInfty = match env p' VInfty
 match env (SuccP p') (VSucc v') = match env p' v'
