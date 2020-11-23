@@ -135,7 +135,7 @@ data Clause = Clause
       -- ^ @Δ@: The types of the pattern variables in dependency order.
     -- , namedClausePats :: NAPs (Using Name instead atm)
       -- ^ @Δ ⊢ ps@.  The de Bruijn indices refer to @Δ@.
-    , namedClausePats :: [Pattern]
+    , namedClausePats :: [SplitPattern]
     , clauseBody      :: Maybe Expr
       -- ^ @Just v@ with @Δ ⊢ v@ for a regular clause, or @Nothing@ for an
       --   absurd one.
@@ -157,6 +157,12 @@ data Clause = Clause
       --   @Just True@ means clause is unreachable.
     }
   deriving (Eq, Show)
+  
+-- | Type used when numbering pattern variables.
+data DBPatVar = DBPatVar
+  { dbPatVarName  :: Name
+  , dbPatVarIndex :: Int
+  } deriving (Show, Eq)
 
 data Pattern
   = WildCardP -- wild card pattern
@@ -167,6 +173,16 @@ data Pattern
   | AbsurdP -- absurd pattern
   | SuccP Pattern -- size successor pattern
   deriving (Eq, Show)
+-- A variable in the pattern of a split clause
+data SplitPattern = SplitPatVar
+  { splitPatVar :: Pattern -- the pattern (with names)
+  , splitPatVarIndex :: Int -- the de Bruijn index of the variable
+  -- , splitExcludedLits :: [Literal] TODO the literals excluded by previous matches.    
+  }
+  deriving (Eq, Show)
+  
+clToPatL :: Clause -> [Pattern]
+clToPatL cl = map splitPatVar (namedClausePats cl)
 
 emptySig :: Signature
 emptySig = Map.empty

@@ -23,12 +23,6 @@ data Match a
     , blockedOnVars :: BlockingVars
     }
   deriving (Show)
--- A variable in the pattern of a split clause
-data SplitPattern = SplitPatVar
-  { splitPatVar :: Pattern -- the pattern (with names)
-  , splitPatVarIndex :: Int -- the de Bruijn index of the variable
-  -- , splitExcludedLits :: [Literal] TODO the literals excluded by previous matches.    
-  }
 
 type SplitInstantiation = [(Nat, SplitPattern)]
 data BlockedOnResult
@@ -93,7 +87,7 @@ matchClause ::
   -> Match SplitInstantiation
      -- ^ Result.
      --   If 'Yes' the instantiation @rs@ such that @(namedClausePats c)[rs] == qs@.
-matchClause qs c = matchPats (namedClausePats c) qs
+matchClause qs cl = matchPats (clToPatL cl) qs
 
 -- | Match the given patterns against a list of clauses
 -- if successful, return the index of the covering clause

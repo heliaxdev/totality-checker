@@ -95,8 +95,8 @@ matchCls [] _tys = return Nothing
 matchCls (cl1:cl2) tys = do
   x <- 
     matchClause 
-      [] 
-      (namedClausePats cl1) 
+      [] -- Env 
+      (clToPatL cl1) 
       (fromMaybe (undefined) (clauseBody cl1)) --TODO absurd clause output
       tys
   case x of

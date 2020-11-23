@@ -64,9 +64,9 @@ A \textit{neighbourhood} of a context is any context mapping that is part of a c
   \{x := 0, y\} : (y : N) \to \Delta
 \] is a neighbourhood of context $\Delta$ in the above example.
 
-\subsubsection{Building a Covering (See $\boldsymbol{Coverage/Match.hs}$ and $\boldsymbol{Coverage.hs}$)} 
+\subsubsection{Building a Covering} 
 
-The algorithm starts with matching the initial context mapping (neighbourhood) with one of the clauses. We start the matching from the first clause. When there are terms that causes the matching to be indecisive (we call these terms \textit{blockers}), we perform an operation called \textit{splitting the context along $i$}, given $i$ is a blocker. As we split the context we yield neighbourhoods which we continue to match with the clauses. We perform context splitting recursively until the current neighbourhood matches one of the original clauses. When matching is successful, we return the covering. If the current neighbourhood fails to match all the given clauses, the clauses are not exhaustive and we terminate with coverage failure.
+See $\boldsymbol{Coverage/Match.hs}$ and $\boldsymbol{Coverage.hs}$. The algorithm starts with matching the initial context mapping (neighbourhood) with one of the clauses. We start the matching from the first clause. When there are terms that causes the matching to be indecisive (we call these terms \textit{blockers}), we perform an operation called \textit{splitting the context along $i$}, given $i$ is a blocker. As we split the context we yield neighbourhoods which we continue to match with the clauses. We perform context splitting recursively until the current neighbourhood matches one of the original clauses. When matching is successful, we return the covering. If the current neighbourhood fails to match all the given clauses, the clauses are not exhaustive and we terminate with coverage failure.
 
 For example, for the following function:
 

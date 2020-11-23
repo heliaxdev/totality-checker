@@ -47,7 +47,7 @@ checkClause _i e cl = do
   v <- eval [] e
   -- phase 1: check accessible patterns & inst dot patterns
   (k, flex, ins, rho, gamma, vt) <- 
-    checkPats 0 [] [] [] [] v (namedClausePats cl)
+    checkPats 0 [] [] [] [] v (clToPatL cl)
   -- phase 2: check inaccessible patterns
   mapM_ (checkDot k rho gamma ins) flex
   -- check the right hand side (e)
