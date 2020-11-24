@@ -31,8 +31,8 @@ data BlockedOnResult
 
 -- | Variable blocking a match
 data BlockingVar = BlockingVar
-  { blockingVarName :: Maybe Name -- name of variable blocking the match
-    -- Nothing when it's a no name var/wildcard (TODO Will this be a problem?)
+  { blockingVarNo  :: Int
+  -- ^ De Bruijn index of variable blocking the match
   , blockingVarCons :: [Pattern] -- constructors in this position
   , blockingVarOverlap :: Bool 
   -- if at least one clause has a var pattern in this position
@@ -65,10 +65,11 @@ overlapping = map setBlockingVarOverlap
 zipBlockingVars :: BlockingVars -> BlockingVars -> BlockingVars
 zipBlockingVars xs ys = map upd xs
   where
-    upd (BlockingVar name cons o) = 
-      case List.find ((name ==) . blockingVarName) ys of
-        Just (BlockingVar _ cons' o') -> BlockingVar name (cons ++ cons') (o || o')
-        Nothing -> BlockingVar name cons True
+    upd (BlockingVar i cons o) = 
+      case List.find ((i ==) . blockingVarNo) ys of
+        Just (BlockingVar _ cons' o') 
+          -> BlockingVar i (cons ++ cons') (o || o')
+        Nothing -> BlockingVar i cons True
 
 -- | Left dominant merge of `BlockedOnResult`.
 choiceBlockedOnResult :: BlockedOnResult -> BlockedOnResult -> BlockedOnResult
@@ -126,13 +127,10 @@ matchPat p q = case splitPatVar p of
   SuccP _ -> error $ "matchPat: the user cannot enter SuccP as a pattern" 
   ConP name pats -> case splitPatVar q of 
     -- unDotP q >>= \case TODO undot a level
-    WildCardP -> Block NotBlockedOnResult [BlockingVar Nothing [] False]
-    VarP vname -> Block NotBlockedOnResult [BlockingVar (Just vname) [] False]
+    WildCardP -> Block NotBlockedOnResult [BlockingVar (splitPatVarIndex q) [] False]
+    VarP _ -> Block NotBlockedOnResult [BlockingVar (splitPatVarIndex q) [] False]
     ConP qname qs
-      | name == qname -> 
-          matchPats 
-            pats 
-            qs 
+      | name == qname -> matchPats pats qs 
       | otherwise -> No
     DotP _ -> No
     AbsurdP -> No
