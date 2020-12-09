@@ -12,33 +12,33 @@ import Types
 import Coverage.Match
 import Coverage.SplitTree
 
--- data SplitClause = SClause
---   { scTel    :: Telescope
---     -- ^ Type of variables in @scPats@.
---   , scPats   :: [NamedArg SplitPattern]
---     -- ^ The patterns leading to the currently considered branch of
---     --   the split tree.
---   , scSubst  :: Substitution' SplitPattern
---     -- ^ Substitution from 'scTel' to old context.
---     --   Only needed directly after split on variable:
---     --   * To update 'scTarget'
---     --   * To rename other split variables when splitting on
---     --     multiple variables.
---     --   @scSubst@ is not ``transitive'', i.e., does not record
---     --   the substitution from the original context to 'scTel'
---     --   over a series of splits.  It is freshly computed
---     --   after each split by 'computeNeighborhood'; also
---     --   'splitResult', which does not split on a variable,
---     --   should reset it to the identity 'idS', lest it be
---     --   applied to 'scTarget' again, leading to Issue 1294.
---   , scCheckpoints :: Map CheckpointId Substitution
---     -- ^ We need to keep track of the module parameter checkpoints for the
---     -- clause for the purpose of inferring missing instance clauses.
---   , scTarget :: Maybe (Dom Type)
---     -- ^ The type of the rhs, living in context 'scTel'.
---     --   'fixTargetType' computes the new 'scTarget' by applying
---     --   substitution 'scSubst'.
---   }
+data SplitClause = SClause
+  { scTel    :: Telescope
+    -- ^ Type of variables in @scPats@.
+  , scPats   :: [SplitPattern]
+    -- ^ The patterns leading to the currently considered branch of
+    --   the split tree.
+  -- , scSubst  :: Substitution' SplitPattern
+    -- ^ Substitution from 'scTel' to old context.
+    --   Only needed directly after split on variable:
+    --   * To update 'scTarget'
+    --   * To rename other split variables when splitting on
+    --     multiple variables.
+    --   @scSubst@ is not ``transitive'', i.e., does not record
+    --   the substitution from the original context to 'scTel'
+    --   over a series of splits.  It is freshly computed
+    --   after each split by 'computeNeighborhood'; also
+    --   'splitResult', which does not split on a variable,
+    --   should reset it to the identity 'idS', lest it be
+    --   applied to 'scTarget' again, leading to Issue 1294.
+  -- , scCheckpoints :: Map CheckpointId Substitution
+    -- ^ We need to keep track of the module parameter checkpoints for the
+    -- clause for the purpose of inferring missing instance clauses.
+  , scTarget :: Maybe (Expr)
+    -- ^ The type of the rhs, living in context 'scTel'.
+    --   'fixTargetType' computes the new 'scTarget' by applying
+    --   substitution 'scSubst'.
+  }
 
 -- -- | A @Covering@ is the result of splitting a 'SplitClause'.
 -- data Covering = Covering
@@ -72,3 +72,25 @@ import Coverage.SplitTree
 
 coverageCheck :: (TypeSig, [Clause]) -> TypeCheck (SplitTree)
 coverageCheck (TypeSig name rhs, cls) = undefined
+
+-- | @cover f cs (SClause _ _ ps _) = return (splitTree, used, pss)@.
+-- used = actually used clauses for cover
+-- pss  = non-covered cases
+--   checks that the list of clauses @cs@ covers the given split clause.
+--   Returns the @splitTree@, the @used@ clauses, and missing cases @pss@.
+--
+--   Effect: adds missing instance clauses for @f@ to signature.
+--
+cover :: Name -> [Clause] -> SplitClause -> TypeCheck (CoverResult)
+cover = undefined
+
+data CoverResult = CoverResult
+  { coverSplitTree       :: SplitTree
+  -- , coverUsedClauses     :: IntSet -- Set Nat
+  , coverMissingClauses  :: [(Telescope, [(Pattern, DBPatVar)])]
+  , coverPatterns        :: [Clause]
+  -- ^ The set of patterns used as cover.
+  -- , coverNoExactClauses  :: IntSet -- Set Nat
+  }
+
+  
